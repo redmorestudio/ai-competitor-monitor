@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Environment and config
+.env
+.env.local
+config.json
+secrets.json
+
+# Google Apps Script
+.clasp.json
+.clasprc.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# API Keys - NEVER commit these!
+*apikey*
+*api_key*
+*secret*
+
+# Backup files
+*.backup
+*.bak
+
+# Test files
+test-*.json
+test-*.txt
+
+# Personal notes
+notes/
+personal/
