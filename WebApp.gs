@@ -162,6 +162,13 @@ function doGet(e) {
         response = getLogsForAPIFixed(parseInt(e.parameter.limit) || 50);
         break;
         
+      case 'execute':
+        // Execute arbitrary functions with parameters
+        const functionName = e.parameter.functionName;
+        const parameters = e.parameter.parameters ? JSON.parse(e.parameter.parameters) : [];
+        response = executeFunction(functionName, parameters);
+        break;
+        
       default:
         response = {
           success: false,
@@ -451,6 +458,172 @@ function createJsonResponse(data, statusCode = 200) {
   const output = ContentService.createTextOutput(JSON.stringify(data));
   output.setMimeType(ContentService.MimeType.JSON);
   return output;
+}
+
+/**
+ * Execute arbitrary functions
+ */
+function executeFunction(functionName, parameters) {
+  try {
+    console.log('Executing function:', functionName, 'with parameters:', parameters);
+    
+    // Map of allowed functions
+    const allowedFunctions = {
+      'processIntelligentMonitor': processIntelligentMonitorMock,
+      'getExtractedData': getExtractedDataMock,
+      'getChangeHistory': getChangeHistoryMock,
+      'updateThresholds': updateThresholdsMock,
+      'updateSelectors': updateSelectorsMock
+    };
+    
+    if (!allowedFunctions[functionName]) {
+      return {
+        success: false,
+        error: 'Function not allowed: ' + functionName
+      };
+    }
+    
+    const result = allowedFunctions[functionName].apply(null, parameters);
+    
+    return {
+      success: true,
+      result: result,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error executing function:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Mock function for intelligent monitoring
+ */
+function processIntelligentMonitorMock(options) {
+  return {
+    summary: {
+      significantChanges: 3,
+      totalChecked: 10,
+      aiProcessed: 3
+    },
+    changes: [
+      {
+        company: 'Anthropic',
+        url: 'https://anthropic.com/pricing',
+        changeMagnitude: 35,
+        relevanceScore: 8,
+        summary: 'New pricing tier added for enterprise customers'
+      },
+      {
+        company: 'OpenAI',
+        url: 'https://openai.com/blog',
+        changeMagnitude: 15,
+        relevanceScore: 7,
+        summary: 'New blog post about GPT-5 capabilities'
+      }
+    ]
+  };
+}
+
+/**
+ * Mock function for extracted data
+ */
+function getExtractedDataMock() {
+  return {
+    data: [
+      {
+        timestamp: new Date().toISOString(),
+        url: 'https://anthropic.com',
+        title: 'Anthropic - AI Safety Company',
+        wordCount: 1523,
+        preview: 'Anthropic is an AI safety company working to build reliable, interpretable, and steerable AI systems...'
+      },
+      {
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        url: 'https://openai.com',
+        title: 'OpenAI',
+        wordCount: 2341,
+        preview: 'OpenAI is an AI research and deployment company dedicated to ensuring that artificial general intelligence...'
+      }
+    ],
+    total: 2
+  };
+}
+
+/**
+ * Mock function for change history
+ */
+function getChangeHistoryMock(urlFilter) {
+  const changes = [
+    {
+      timestamp: new Date().toISOString(),
+      company: 'Anthropic',
+      url: 'https://anthropic.com/pricing',
+      changeMagnitude: 35,
+      relevanceScore: 8,
+      summary: 'New pricing tier added for enterprise customers',
+      previousHash: 'abc123',
+      currentHash: 'def456'
+    },
+    {
+      timestamp: new Date(Date.now() - 86400000).toISOString(),
+      company: 'OpenAI',
+      url: 'https://openai.com/blog',
+      changeMagnitude: 15,
+      relevanceScore: 7,
+      summary: 'New blog post about GPT-5 capabilities',
+      previousHash: 'ghi789',
+      currentHash: 'jkl012'
+    },
+    {
+      timestamp: new Date(Date.now() - 172800000).toISOString(),
+      company: 'Google DeepMind',
+      url: 'https://deepmind.google',
+      changeMagnitude: 42,
+      relevanceScore: 9,
+      summary: 'Major announcement about Gemini 2.0 release',
+      previousHash: 'mno345',
+      currentHash: 'pqr678'
+    }
+  ];
+  
+  // Filter if URL provided
+  if (urlFilter) {
+    return {
+      changes: changes.filter(c => c.url === urlFilter),
+      total: changes.filter(c => c.url === urlFilter).length
+    };
+  }
+  
+  return {
+    changes: changes,
+    total: changes.length
+  };
+}
+
+/**
+ * Mock function for updating thresholds
+ */
+function updateThresholdsMock(updates) {
+  console.log('Updating thresholds:', updates);
+  return {
+    success: true,
+    message: 'Thresholds updated successfully'
+  };
+}
+
+/**
+ * Mock function for updating selectors
+ */
+function updateSelectorsMock(selectors) {
+  console.log('Updating selectors:', selectors);
+  return {
+    success: true,
+    message: 'Selectors updated successfully'
+  };
 }
 
 /**
