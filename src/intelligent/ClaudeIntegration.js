@@ -11,7 +11,7 @@
  * Enhanced processMonitorEnhanced with Claude AI
  * This replaces the existing processMonitorEnhanced function
  */
-function processMonitorEnhanced(monitor) {
+function processMonitorEnhancedWithClaude(monitor) {
   const results = {
     company: monitor.company,
     urls: [],

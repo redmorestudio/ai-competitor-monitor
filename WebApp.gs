@@ -100,71 +100,9 @@ function getCompleteMonitorConfig() {
 }
 
 // ============ CONFIGURATION ============
-const INTELLIGENT_CONFIG = {
-  maxContentLength: 50000,
-  relevanceThreshold: 6,
-  crawlDelay: 2000,
-  retryAttempts: 3,
-  
-  keywords: {
-    high: ['price', 'pricing', 'launch', 'new', 'release', 'announce', 'available', 'introducing'],
-    medium: ['feature', 'update', 'improve', 'enhance', 'api', 'model', 'performance', 'capability'],
-    low: ['fix', 'patch', 'minor', 'small', 'tweak', 'adjust']
-  },
-  
-  pageWeights: {
-    'homepage': 0.8,
-    'index': 0.8,
-    'home': 0.8,
-    'news': 1.2,
-    'blog': 1.2,
-    'updates': 1.2,
-    'technology': 1.5,
-    'features': 1.5,
-    'products': 1.5,
-    'pricing': 2.0,
-    'announcement': 2.0
-  }
-};
+// INTELLIGENT_CONFIG is imported from src/intelligent/IntelligentMonitor.js
 
-// Configuration for intelligent monitoring
-const MONITOR_CONFIG = {
-  // Configurable thresholds
-  thresholds: {
-    global: 25, // Default 25% change threshold
-    company: {
-      "Anthropic": 15,     // More sensitive for Anthropic
-      "OpenAI": 30,        // Less sensitive for OpenAI
-      "Google DeepMind": 20,
-      "Mistral AI": 25
-    },
-    page: {
-      // Specific page overrides (supports wildcards)
-      "*/pricing*": 10,    // Very sensitive for pricing pages
-      "*/blog/*": 50,      // Less sensitive for blog posts
-      "*/api/*": 15,       // Sensitive for API documentation
-      "*/about/*": 40      // Less sensitive for about pages
-    }
-  },
-  
-  // AI relevance thresholds
-  aiThresholds: {
-    alertThreshold: 6,     // Alert on AI score >= 6
-    noiseThreshold: 3,     // Ignore changes with AI score < 3
-    criticalKeywords: ["price", "launch", "deprecat", "shutdown", "acquired"]
-  },
-  
-  // Content extraction selectors
-  contentSelectors: {
-    default: "main, article, .content, #content, [role='main']",
-    exclude: "nav, header, footer, .sidebar, .ads, script, style",
-    specific: {
-      "anthropic.com": "main.relative",
-      "openai.com": "main.main-content",
-      "mistral.ai": ".prose"
-    }
-  }
-};
+// Configuration for intelligent monitoring is imported from src/Main.gs
 
 /**
  * Main entry point for web app - handles all API requests

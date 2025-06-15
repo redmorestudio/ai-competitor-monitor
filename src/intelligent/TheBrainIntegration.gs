@@ -1,6 +1,7 @@
 /**
  * TheBrain Integration for AI Competitor Monitor
  * Enhances our competitive intelligence with dynamic knowledge mapping
+ * Features flexible brain management: use existing brain or create new one
  */
 
 // ============ THEBRAIN CONFIGURATION ============
@@ -8,7 +9,7 @@ const THEBRAIN_CONFIG = {
   apiKey: '8388b9cd07738668174a12571beb777df9e8266c533aa785a0c12534388d09ba',
   baseUrl: 'https://api.bra.in',
   enabled: true,
-  brainName: 'AI Competitive Intelligence',
+  defaultBrainName: 'AI Competitive Intelligence',
   
   // Categories for organizing thoughts
   categories: {
@@ -20,10 +21,170 @@ const THEBRAIN_CONFIG = {
   }
 };
 
+// ============ FLEXIBLE BRAIN ID MANAGEMENT ============
+
+/**
+ * Get the configured brain ID - checks multiple sources
+ * Priority: 1) Script Properties, 2) Manual override, 3) None (will create new)
+ */
+function getBrainId() {
+  // First check script properties (persistent storage)
+  const storedBrainId = PropertiesService.getScriptProperties().getProperty('theBrainId');
+  if (storedBrainId) {
+    return storedBrainId;
+  }
+  
+  // If you have a specific brain you want to use, you can set it here:
+  const manualBrainId = 'ffa43994-e9b6-45f5-b494-203b7c6451b9'; // Your existing brain
+  if (manualBrainId) {
+    // Store it for future use
+    PropertiesService.getScriptProperties().setProperty('theBrainId', manualBrainId);
+    return manualBrainId;
+  }
+  
+  // No brain configured - will need to create one
+  return null;
+}
+
+/**
+ * Set the brain ID to use for this integration
+ */
+function setBrainId(brainId) {
+  PropertiesService.getScriptProperties().setProperty('theBrainId', brainId);
+  console.log(`TheBrain ID set to: ${brainId}`);
+}
+
+/**
+ * Clear the configured brain ID (will create new brain on next use)
+ */
+function clearBrainId() {
+  PropertiesService.getScriptProperties().deleteProperty('theBrainId');
+  console.log('TheBrain ID cleared - will create new brain on next use');
+}
+
+// ============ BRAIN ACCESS & CREATION ============
+
+/**
+ * Get or create brain for competitive intelligence
+ * Smart logic: use existing if configured, create new if not
+ */
+function getOrCreateBrain() {
+  try {
+    // Check if we have a configured brain ID
+    const existingBrainId = getBrainId();
+    
+    if (existingBrainId) {
+      // Try to access the existing brain
+      console.log(`Attempting to use existing brain: ${existingBrainId}`);
+      const verification = verifyBrainAccess(existingBrainId);
+      
+      if (verification.success) {
+        console.log(`✅ Using existing brain: ${verification.brain.name || existingBrainId}`);
+        return {
+          success: true,
+          brainId: existingBrainId,
+          brainName: verification.brain.name,
+          isNew: false,
+          message: `Using existing brain: ${verification.brain.name || existingBrainId}`
+        };
+      } else {
+        console.warn(`⚠️ Cannot access configured brain ${existingBrainId}: ${verification.error}`);
+        console.log('Will create a new brain instead...');
+        // Clear the invalid brain ID and continue to create new one
+        clearBrainId();
+      }
+    }
+    
+    // No valid brain configured - create a new one
+    console.log('Creating new competitive intelligence brain...');
+    const newBrain = createCompetitiveIntelligenceBrain();
+    
+    if (newBrain.success) {
+      // Store the new brain ID for future use
+      setBrainId(newBrain.brainId);
+      console.log(`✅ Created new brain: ${newBrain.brainName} (${newBrain.brainId})`);
+      
+      return {
+        success: true,
+        brainId: newBrain.brainId,
+        brainName: newBrain.brainName,
+        isNew: true,
+        message: `Created new brain: ${newBrain.brainName}`
+      };
+    } else {
+      throw new Error(`Failed to create new brain: ${newBrain.error}`);
+    }
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString(),
+      message: 'Failed to get or create brain'
+    };
+  }
+}
+
+/**
+ * Verify access to a specific brain
+ */
+function verifyBrainAccess(brainId) {
+  try {
+    if (!brainId) {
+      throw new Error('No brain ID provided');
+    }
+    
+    // Try to get brain info to verify access
+    const brain = callTheBrainAPI('GET', `/brains/${brainId}`);
+    
+    return {
+      success: true,
+      brain: brain,
+      message: `Access verified to brain: ${brain.name || brainId}`
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString(),
+      message: 'Cannot access brain'
+    };
+  }
+}
+
+/**
+ * Create a new competitive intelligence brain
+ */
+function createCompetitiveIntelligenceBrain() {
+  try {
+    const brainData = {
+      name: THEBRAIN_CONFIG.defaultBrainName,
+      description: 'Automated competitive intelligence brain created by AI Competitor Monitor',
+      tags: ['competitive-intelligence', 'ai-industry', 'automated'],
+      isPrivate: true
+    };
+    
+    const brain = callTheBrainAPI('POST', '/brains', brainData);
+    
+    return {
+      success: true,
+      brainId: brain.id,
+      brainName: brain.name,
+      message: 'New competitive intelligence brain created'
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString(),
+      message: 'Failed to create new brain'
+    };
+  }
+}
+
 // ============ THEBRAIN API FUNCTIONS ============
 
 /**
- * Test TheBrain API connection
+ * Test TheBrain API connection and brain access
  */
 function testTheBrainConnection() {
   try {
@@ -35,14 +196,20 @@ function testTheBrainConnection() {
       };
     }
     
-    // Test basic API call - get brain info
-    const response = callTheBrainAPI('GET', '/brains');
+    // Test getting or creating a brain
+    const brainResult = getOrCreateBrain();
     
-    return {
-      success: true,
-      brains: response,
-      message: 'TheBrain connection successful'
-    };
+    if (brainResult.success) {
+      return {
+        success: true,
+        brainId: brainResult.brainId,
+        brainName: brainResult.brainName,
+        isNew: brainResult.isNew,
+        message: `Connection successful: ${brainResult.message}`
+      };
+    } else {
+      return brainResult;
+    }
     
   } catch (error) {
     return {
@@ -54,34 +221,35 @@ function testTheBrainConnection() {
 }
 
 /**
- * Create a competitive intelligence brain
+ * Initialize competitive intelligence in brain (existing or new)
  */
-function createCompetitiveIntelligenceBrain() {
+function initializeCompetitiveIntelligence() {
   try {
-    // Create main brain for competitive intelligence
-    const brainData = {
-      name: THEBRAIN_CONFIG.brainName,
-      description: 'AI Industry Competitive Intelligence - Real-time monitoring and analysis',
-      isPublic: false
-    };
+    // Get or create brain
+    const brainResult = getOrCreateBrain();
+    if (!brainResult.success) {
+      throw new Error(`Brain setup failed: ${brainResult.error}`);
+    }
     
-    const brain = callTheBrainAPI('POST', '/brains', brainData);
+    const brainId = brainResult.brainId;
     
-    // Store brain ID for future use
-    PropertiesService.getScriptProperties().setProperty('theBrainId', brain.id);
+    // Create category thoughts if they don't exist
+    const categoriesCreated = initializeCategoryThoughts(brainId);
     
-    // Create category thoughts
-    createCategoryThoughts(brain.id);
-    
-    logActivity('TheBrain competitive intelligence brain created', 'success', {
-      brainId: brain.id,
-      name: brain.name
+    logActivity('TheBrain competitive intelligence initialized', 'success', {
+      brainId: brainId,
+      brainName: brainResult.brainName,
+      isNewBrain: brainResult.isNew,
+      categoriesCreated: categoriesCreated
     });
     
     return {
       success: true,
-      brain: brain,
-      message: 'Competitive intelligence brain created'
+      brainId: brainId,
+      brainName: brainResult.brainName,
+      isNewBrain: brainResult.isNew,
+      categoriesCreated: categoriesCreated,
+      message: `Competitive intelligence initialized: ${brainResult.message}`
     };
     
   } catch (error) {
@@ -93,76 +261,107 @@ function createCompetitiveIntelligenceBrain() {
 }
 
 /**
- * Create category organizing thoughts
+ * Initialize or verify category organizing thoughts
  */
-function createCategoryThoughts(brainId) {
-  Object.values(THEBRAIN_CONFIG.categories).forEach(category => {
-    const thoughtData = {
-      name: category,
-      label: category,
-      thoughtType: 'category',
-      notes: `Category for organizing ${category.toLowerCase()} in competitive intelligence`
-    };
-    
-    const thought = callTheBrainAPI('POST', `/brains/${brainId}/thoughts`, thoughtData);
-    
-    // Store category thought IDs
-    const key = `theBrainCategory_${category.replace(/\s+/g, '_')}`;
-    PropertiesService.getScriptProperties().setProperty(key, thought.id);
+function initializeCategoryThoughts(brainId) {
+  let categoriesCreated = 0;
+  
+  Object.entries(THEBRAIN_CONFIG.categories).forEach(([key, categoryName]) => {
+    try {
+      // Check if category already exists
+      const existingThoughts = findThoughtsByName(brainId, categoryName);
+      
+      if (existingThoughts.length === 0) {
+        // Create new category thought
+        const thoughtData = {
+          name: categoryName,
+          label: categoryName,
+          thoughtType: 'category',
+          notes: `Category for organizing ${categoryName.toLowerCase()} in competitive intelligence`
+        };
+        
+        const thought = callTheBrainAPI('POST', `/brains/${brainId}/thoughts`, thoughtData);
+        
+        // Store category thought ID
+        const storageKey = `theBrainCategory_${key}`;
+        PropertiesService.getScriptProperties().setProperty(storageKey, thought.id);
+        
+        categoriesCreated++;
+        console.log(`Created category: ${categoryName}`);
+      } else {
+        // Store existing category thought ID
+        const storageKey = `theBrainCategory_${key}`;
+        PropertiesService.getScriptProperties().setProperty(storageKey, existingThoughts[0].id);
+        console.log(`Found existing category: ${categoryName}`);
+      }
+    } catch (error) {
+      console.error(`Error with category ${categoryName}:`, error);
+    }
   });
+  
+  return categoriesCreated;
 }
 
 /**
- * Add AI company thoughts to TheBrain
+ * Add AI company thoughts to the brain
  */
 function addCompaniesToBrain() {
   try {
-    const brainId = PropertiesService.getScriptProperties().getProperty('theBrainId');
-    if (!brainId) {
-      throw new Error('No competitive intelligence brain found. Create brain first.');
+    // Get or create brain
+    const brainResult = getOrCreateBrain();
+    if (!brainResult.success) {
+      throw new Error(`Brain setup failed: ${brainResult.error}`);
     }
     
+    const brainId = brainResult.brainId;
     const config = getCompleteMonitorConfig();
-    const companiesCategory = PropertiesService.getScriptProperties().getProperty('theBrainCategory_AI_Companies');
+    const companiesCategory = PropertiesService.getScriptProperties().getProperty('theBrainCategory_companies');
+    
+    let companiesAdded = 0;
+    let companiesUpdated = 0;
     
     config.forEach(companyConfig => {
-      // Create company thought
-      const companyThought = {
-        name: companyConfig.company,
-        label: companyConfig.company,
-        thoughtType: 'company',
-        notes: `AI Company: ${companyConfig.company}\nURLs monitored: ${companyConfig.urls.length}`,
-        tags: ['ai-company', 'competitor']
-      };
-      
-      const company = callTheBrainAPI('POST', `/brains/${brainId}/thoughts`, companyThought);
-      
-      // Link to companies category
-      if (companiesCategory) {
-        linkThoughts(brainId, companiesCategory, company.id, 'contains');
+      try {
+        // Check if company already exists
+        const existingCompanies = findThoughtsByName(brainId, companyConfig.company);
+        
+        if (existingCompanies.length === 0) {
+          // Create new company thought
+          const companyThought = {
+            name: companyConfig.company,
+            label: companyConfig.company,
+            thoughtType: 'company',
+            notes: `AI Company: ${companyConfig.company}\nURLs monitored: ${companyConfig.urls.length}\nAdded by AI Competitor Monitor`,
+            tags: ['ai-company', 'competitor']
+          };
+          
+          const company = callTheBrainAPI('POST', `/brains/${brainId}/thoughts`, companyThought);
+          companiesAdded++;
+          
+          // Link to companies category
+          if (companiesCategory) {
+            linkThoughts(brainId, companiesCategory, company.id, 'contains');
+          }
+          
+          console.log(`Added company: ${companyConfig.company}`);
+        } else {
+          companiesUpdated++;
+          console.log(`Company already exists: ${companyConfig.company}`);
+        }
+        
+      } catch (companyError) {
+        console.error(`Error processing company ${companyConfig.company}:`, companyError);
       }
-      
-      // Create URL thoughts for each monitored URL
-      companyConfig.urls.forEach(urlObj => {
-        const urlThought = {
-          name: `${urlObj.type}: ${urlObj.url}`,
-          label: urlObj.type,
-          thoughtType: 'url',
-          notes: `Monitored URL: ${urlObj.url}\nType: ${urlObj.type}`,
-          tags: ['monitored-url', urlObj.type]
-        };
-        
-        const url = callTheBrainAPI('POST', `/brains/${brainId}/thoughts`, urlThought);
-        
-        // Link URL to company
-        linkThoughts(brainId, company.id, url.id, 'monitors');
-      });
     });
     
     return {
       success: true,
-      companiesAdded: config.length,
-      message: 'Companies added to competitive intelligence brain'
+      brainId: brainId,
+      brainName: brainResult.brainName,
+      companiesAdded: companiesAdded,
+      companiesUpdated: companiesUpdated,
+      totalCompanies: config.length,
+      message: `Companies processed: ${companiesAdded} added, ${companiesUpdated} existing`
     };
     
   } catch (error) {
@@ -178,10 +377,18 @@ function addCompaniesToBrain() {
  */
 function addChangeToTheBrain(change) {
   try {
-    const brainId = PropertiesService.getScriptProperties().getProperty('theBrainId');
-    if (!brainId || !THEBRAIN_CONFIG.enabled) {
+    if (!THEBRAIN_CONFIG.enabled) {
       return null; // Silent fail if TheBrain not configured
     }
+    
+    // Get or create brain
+    const brainResult = getOrCreateBrain();
+    if (!brainResult.success) {
+      console.error('Cannot add change to TheBrain - brain setup failed:', brainResult.error);
+      return null;
+    }
+    
+    const brainId = brainResult.brainId;
     
     // Create change thought
     const changeThought = {
@@ -195,7 +402,7 @@ function addChangeToTheBrain(change) {
     const thought = callTheBrainAPI('POST', `/brains/${brainId}/thoughts`, changeThought);
     
     // Link to changes category and company
-    const changesCategory = PropertiesService.getScriptProperties().getProperty('theBrainCategory_Market_Changes');
+    const changesCategory = PropertiesService.getScriptProperties().getProperty('theBrainCategory_changes');
     if (changesCategory) {
       linkThoughts(brainId, changesCategory, thought.id, 'contains');
     }
@@ -214,6 +421,7 @@ function addChangeToTheBrain(change) {
     return {
       success: true,
       thoughtId: thought.id,
+      brainId: brainId,
       message: 'Change added to TheBrain'
     };
     
@@ -243,7 +451,7 @@ function createInsightThought(brainId, change, changeThoughtId) {
   // Link insight to change and insights category
   linkThoughts(brainId, changeThoughtId, insight.id, 'indicates');
   
-  const insightsCategory = PropertiesService.getScriptProperties().getProperty('theBrainCategory_Strategic_Insights');
+  const insightsCategory = PropertiesService.getScriptProperties().getProperty('theBrainCategory_insights');
   if (insightsCategory) {
     linkThoughts(brainId, insightsCategory, insight.id, 'contains');
   }
@@ -359,10 +567,13 @@ function findThoughtsByName(brainId, name) {
  */
 function generateCompetitiveLandscape() {
   try {
-    const brainId = PropertiesService.getScriptProperties().getProperty('theBrainId');
-    if (!brainId) {
-      throw new Error('No competitive intelligence brain found');
+    // Get or create brain
+    const brainResult = getOrCreateBrain();
+    if (!brainResult.success) {
+      throw new Error(`Brain setup failed: ${brainResult.error}`);
     }
+    
+    const brainId = brainResult.brainId;
     
     // Get recent changes grouped by company
     const changes = getStoredChanges(100);
@@ -387,7 +598,7 @@ function generateCompetitiveLandscape() {
     const analysis = callTheBrainAPI('POST', `/brains/${brainId}/thoughts`, trendThought);
     
     // Link to trends category
-    const trendsCategory = PropertiesService.getScriptProperties().getProperty('theBrainCategory_Industry_Trends');
+    const trendsCategory = PropertiesService.getScriptProperties().getProperty('theBrainCategory_trends');
     if (trendsCategory) {
       linkThoughts(brainId, trendsCategory, analysis.id, 'contains');
     }
@@ -402,6 +613,7 @@ function generateCompetitiveLandscape() {
     
     return {
       success: true,
+      brainId: brainId,
       analysisId: analysis.id,
       companiesAnalyzed: Object.keys(changesByCompany).length
     };
@@ -520,11 +732,14 @@ function storeChangeWithTheBrain(change) {
  * Get TheBrain integration status
  */
 function getTheBrainStatus() {
+  const currentBrainId = getBrainId();
+  
   return {
     enabled: THEBRAIN_CONFIG.enabled,
     apiKey: THEBRAIN_CONFIG.apiKey ? 'configured' : 'missing',
-    brainId: PropertiesService.getScriptProperties().getProperty('theBrainId'),
-    brainName: THEBRAIN_CONFIG.brainName,
+    brainId: currentBrainId,
+    brainConfigured: !!currentBrainId,
+    brainName: THEBRAIN_CONFIG.defaultBrainName,
     categories: Object.keys(THEBRAIN_CONFIG.categories).length
   };
 }
@@ -536,7 +751,7 @@ function testTheBrainIntegration() {
   try {
     console.log('Testing TheBrain integration...');
     
-    // 1. Test connection
+    // 1. Test connection and brain access/creation
     const connectionTest = testTheBrainConnection();
     console.log('Connection test:', connectionTest.success ? 'PASS' : 'FAIL');
     
@@ -544,14 +759,12 @@ function testTheBrainIntegration() {
       return connectionTest;
     }
     
-    // 2. Create or verify brain exists
-    let brainId = PropertiesService.getScriptProperties().getProperty('theBrainId');
-    if (!brainId) {
-      const brainResult = createCompetitiveIntelligenceBrain();
-      if (!brainResult.success) {
-        return brainResult;
-      }
-      brainId = brainResult.brain.id;
+    // 2. Initialize competitive intelligence (categories)
+    const initResult = initializeCompetitiveIntelligence();
+    console.log('Initialization test:', initResult.success ? 'PASS' : 'FAIL');
+    
+    if (!initResult.success) {
+      return initResult;
     }
     
     // 3. Test adding companies
@@ -571,15 +784,23 @@ function testTheBrainIntegration() {
     };
     
     const changeResult = addChangeToTheBrain(mockChange);
-    console.log('Change test:', changeResult.success ? 'PASS' : 'FAIL');
+    console.log('Change test:', changeResult ? (changeResult.success ? 'PASS' : 'FAIL') : 'SKIP');
     
     return {
       success: true,
-      brainId: brainId,
+      brainId: connectionTest.brainId,
+      brainName: connectionTest.brainName,
+      isNewBrain: connectionTest.isNew,
       tests: {
         connection: connectionTest.success,
+        initialization: initResult.success,
         companies: companiesResult.success,
-        changes: changeResult.success
+        changes: changeResult ? changeResult.success : false
+      },
+      results: {
+        categoriesCreated: initResult.categoriesCreated,
+        companiesAdded: companiesResult.companiesAdded,
+        companiesUpdated: companiesResult.companiesUpdated
       },
       message: 'TheBrain integration fully operational'
     };
@@ -591,4 +812,55 @@ function testTheBrainIntegration() {
       message: 'TheBrain integration test failed'
     };
   }
+}
+
+// ============ UTILITY FUNCTIONS ============
+
+/**
+ * Force use of a specific brain ID
+ */
+function forceUseBrain(brainId) {
+  if (!brainId) {
+    throw new Error('Brain ID required');
+  }
+  
+  const verification = verifyBrainAccess(brainId);
+  if (verification.success) {
+    setBrainId(brainId);
+    return {
+      success: true,
+      brainId: brainId,
+      brainName: verification.brain.name,
+      message: `Now using brain: ${verification.brain.name}`
+    };
+  } else {
+    return {
+      success: false,
+      error: verification.error,
+      message: 'Cannot access specified brain'
+    };
+  }
+}
+
+/**
+ * Get current brain information
+ */
+function getCurrentBrainInfo() {
+  const brainId = getBrainId();
+  if (!brainId) {
+    return {
+      configured: false,
+      message: 'No brain configured - will create new brain on first use'
+    };
+  }
+  
+  const verification = verifyBrainAccess(brainId);
+  return {
+    configured: true,
+    brainId: brainId,
+    accessible: verification.success,
+    brainName: verification.success ? verification.brain.name : 'Unknown',
+    error: verification.success ? null : verification.error,
+    message: verification.message
+  };
 }
