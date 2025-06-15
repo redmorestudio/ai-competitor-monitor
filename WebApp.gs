@@ -1,6 +1,6 @@
 /**
- * WebApp.gs - Root level web app handler for AI Competitor Monitor
- * This file MUST be at the root level for Google Apps Script to recognize doGet
+ * WebApp.gs - Enhanced with Real Intelligent Monitoring Integration
+ * Integrates all the intelligent monitoring code from src/ directory
  */
 
 // Import configurations from CompanyConfigComplete
@@ -98,6 +98,73 @@ function getCompleteMonitorConfig() {
     }
   ];
 }
+
+// ============ CONFIGURATION ============
+const INTELLIGENT_CONFIG = {
+  maxContentLength: 50000,
+  relevanceThreshold: 6,
+  crawlDelay: 2000,
+  retryAttempts: 3,
+  
+  keywords: {
+    high: ['price', 'pricing', 'launch', 'new', 'release', 'announce', 'available', 'introducing'],
+    medium: ['feature', 'update', 'improve', 'enhance', 'api', 'model', 'performance', 'capability'],
+    low: ['fix', 'patch', 'minor', 'small', 'tweak', 'adjust']
+  },
+  
+  pageWeights: {
+    'homepage': 0.8,
+    'index': 0.8,
+    'home': 0.8,
+    'news': 1.2,
+    'blog': 1.2,
+    'updates': 1.2,
+    'technology': 1.5,
+    'features': 1.5,
+    'products': 1.5,
+    'pricing': 2.0,
+    'announcement': 2.0
+  }
+};
+
+// Configuration for intelligent monitoring
+const MONITOR_CONFIG = {
+  // Configurable thresholds
+  thresholds: {
+    global: 25, // Default 25% change threshold
+    company: {
+      "Anthropic": 15,     // More sensitive for Anthropic
+      "OpenAI": 30,        // Less sensitive for OpenAI
+      "Google DeepMind": 20,
+      "Mistral AI": 25
+    },
+    page: {
+      // Specific page overrides (supports wildcards)
+      "*/pricing*": 10,    // Very sensitive for pricing pages
+      "*/blog/*": 50,      // Less sensitive for blog posts
+      "*/api/*": 15,       // Sensitive for API documentation
+      "*/about/*": 40      // Less sensitive for about pages
+    }
+  },
+  
+  // AI relevance thresholds
+  aiThresholds: {
+    alertThreshold: 6,     // Alert on AI score >= 6
+    noiseThreshold: 3,     // Ignore changes with AI score < 3
+    criticalKeywords: ["price", "launch", "deprecat", "shutdown", "acquired"]
+  },
+  
+  // Content extraction selectors
+  contentSelectors: {
+    default: "main, article, .content, #content, [role='main']",
+    exclude: "nav, header, footer, .sidebar, .ads, script, style",
+    specific: {
+      "anthropic.com": "main.relative",
+      "openai.com": "main.main-content",
+      "mistral.ai": ".prose"
+    }
+  }
+};
 
 /**
  * Main entry point for web app - handles all API requests
@@ -234,7 +301,7 @@ function getSystemStatusFixed() {
       lastRun: {
         monitor: lastRun || 'never'
       },
-      version: 47,
+      version: 48,
       timestamp: new Date().toISOString()
     };
   } catch (error) {
@@ -263,21 +330,9 @@ function getConfigForAPIFixed() {
       success: true,
       monitors: apiConfig,
       config: {
-        thresholds: {
-          global: 25,
-          company: {
-            "Anthropic": 15,
-            "OpenAI": 30,
-            "Google DeepMind": 20
-          }
-        },
-        aiThresholds: {
-          alertThreshold: 6
-        },
-        contentSelectors: {
-          default: "main, article, .content, #content",
-          exclude: "nav, header, footer, .sidebar, .ads"
-        }
+        thresholds: MONITOR_CONFIG.thresholds,
+        aiThresholds: MONITOR_CONFIG.aiThresholds,
+        contentSelectors: MONITOR_CONFIG.contentSelectors
       },
       timestamp: new Date().toISOString()
     };
@@ -295,12 +350,14 @@ function getConfigForAPIFixed() {
  */
 function getRecentChangesForAPIFixed() {
   try {
-    // Return mock data for now
+    // Get stored changes from the Changes sheet
+    const changes = getStoredChanges(50); // Get last 50 changes
+    
     return {
       success: true,
-      changes: [],
-      total: 0,
-      message: 'No changes recorded yet',
+      changes: changes,
+      total: changes.length,
+      message: changes.length > 0 ? `${changes.length} changes found` : 'No changes recorded yet',
       timestamp: new Date().toISOString()
     };
   } catch (error) {
@@ -318,10 +375,14 @@ function generateBaselineForAPIFixed() {
   try {
     const config = getCompleteMonitorConfig();
     
+    // Run baseline generation for all companies
+    const results = processAllMonitors(config, true); // true = baseline mode
+    
     return {
       success: true,
       companies: config.length,
-      message: 'Baseline generation initiated',
+      results: results,
+      message: 'Baseline generation completed',
       timestamp: new Date().toISOString()
     };
   } catch (error) {
@@ -339,6 +400,17 @@ function runMonitorForAPIFixed(checkAll = false) {
   try {
     const config = getCompleteMonitorConfig();
     
+    // Run monitoring for all companies
+    const results = processAllMonitors(config, false); // false = monitoring mode
+    
+    // Count relevant changes
+    let relevantChanges = 0;
+    results.forEach(result => {
+      if (result.changes) {
+        relevantChanges += result.changes.filter(c => c.relevanceScore >= INTELLIGENT_CONFIG.relevanceThreshold).length;
+      }
+    });
+    
     // Update last run
     PropertiesService.getScriptProperties().setProperty(
       'LAST_MULTI_URL_RUN', 
@@ -347,8 +419,10 @@ function runMonitorForAPIFixed(checkAll = false) {
     
     return {
       success: true,
-      message: `Monitoring check initiated for ${config.length} companies`,
-      relevantChanges: 0,
+      message: `Monitoring check completed for ${config.length} companies`,
+      companiesChecked: config.length,
+      relevantChanges: relevantChanges,
+      results: results,
       timestamp: new Date().toISOString()
     };
   } catch (error) {
@@ -364,14 +438,12 @@ function runMonitorForAPIFixed(checkAll = false) {
  */
 function getLogsForAPIFixed(limit = 50) {
   try {
+    const logs = getStoredLogs(limit);
+    
     return {
       success: true,
-      logs: [{
-        timestamp: new Date().toISOString(),
-        type: 'info',
-        message: 'AI Competitor Monitor API v47 operational'
-      }],
-      total: 1,
+      logs: logs,
+      total: logs.length,
       timestamp: new Date().toISOString()
     };
   } catch (error) {
@@ -399,14 +471,22 @@ function getStatsForAPIFixed() {
       });
     });
     
+    // Get change statistics
+    const changes = getStoredChanges(1000);
+    const todayChanges = changes.filter(c => {
+      const changeDate = new Date(c.timestamp);
+      const today = new Date();
+      return changeDate.toDateString() === today.toDateString();
+    });
+    
     return {
       success: true,
       stats: {
         companies: config.length,
         totalUrls: totalUrls,
         urlTypes: urlTypes,
-        totalChanges: 0,
-        todayChanges: 0,
+        totalChanges: changes.length,
+        todayChanges: todayChanges.length,
         lastRun: PropertiesService.getScriptProperties().getProperty('LAST_MULTI_URL_RUN') || 'Never'
       },
       timestamp: new Date().toISOString()
@@ -461,19 +541,19 @@ function createJsonResponse(data, statusCode = 200) {
 }
 
 /**
- * Execute arbitrary functions
+ * Execute arbitrary functions - NOW WITH REAL FUNCTIONS
  */
 function executeFunction(functionName, parameters) {
   try {
     console.log('Executing function:', functionName, 'with parameters:', parameters);
     
-    // Map of allowed functions
+    // Map of allowed functions - NOW USING REAL IMPLEMENTATIONS
     const allowedFunctions = {
-      'processIntelligentMonitor': processIntelligentMonitorMock,
-      'getExtractedData': getExtractedDataMock,
-      'getChangeHistory': getChangeHistoryMock,
-      'updateThresholds': updateThresholdsMock,
-      'updateSelectors': updateSelectorsMock
+      'processIntelligentMonitor': processIntelligentMonitorReal,
+      'getExtractedData': getExtractedDataReal,
+      'getChangeHistory': getChangeHistoryReal,
+      'updateThresholds': updateThresholdsReal,
+      'updateSelectors': updateSelectorsReal
     };
     
     if (!allowedFunctions[functionName]) {
@@ -499,138 +579,859 @@ function executeFunction(functionName, parameters) {
   }
 }
 
-/**
- * Mock function for intelligent monitoring
- */
-function processIntelligentMonitorMock(options) {
-  return {
-    summary: {
-      significantChanges: 3,
-      totalChecked: 10,
-      aiProcessed: 3
-    },
-    changes: [
-      {
-        company: 'Anthropic',
-        url: 'https://anthropic.com/pricing',
-        changeMagnitude: 35,
-        relevanceScore: 8,
-        summary: 'New pricing tier added for enterprise customers'
-      },
-      {
-        company: 'OpenAI',
-        url: 'https://openai.com/blog',
-        changeMagnitude: 15,
-        relevanceScore: 7,
-        summary: 'New blog post about GPT-5 capabilities'
-      }
-    ]
-  };
-}
+// ============ REAL INTELLIGENT MONITORING FUNCTIONS ============
 
 /**
- * Mock function for extracted data
+ * REAL function for intelligent monitoring
  */
-function getExtractedDataMock() {
-  return {
-    data: [
-      {
-        timestamp: new Date().toISOString(),
-        url: 'https://anthropic.com',
-        title: 'Anthropic - AI Safety Company',
-        wordCount: 1523,
-        preview: 'Anthropic is an AI safety company working to build reliable, interpretable, and steerable AI systems...'
-      },
-      {
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        url: 'https://openai.com',
-        title: 'OpenAI',
-        wordCount: 2341,
-        preview: 'OpenAI is an AI research and deployment company dedicated to ensuring that artificial general intelligence...'
+function processIntelligentMonitorReal(options) {
+  try {
+    const config = getCompleteMonitorConfig();
+    const results = processAllMonitors(config, false);
+    
+    // Aggregate results
+    let totalChecked = 0;
+    let significantChanges = 0;
+    let allChanges = [];
+    
+    results.forEach(result => {
+      totalChecked += result.urls.length;
+      if (result.changes) {
+        const significant = result.changes.filter(c => c.relevanceScore >= INTELLIGENT_CONFIG.relevanceThreshold);
+        significantChanges += significant.length;
+        allChanges = allChanges.concat(result.changes);
       }
-    ],
-    total: 2
-  };
-}
-
-/**
- * Mock function for change history
- */
-function getChangeHistoryMock(urlFilter) {
-  const changes = [
-    {
-      timestamp: new Date().toISOString(),
-      company: 'Anthropic',
-      url: 'https://anthropic.com/pricing',
-      changeMagnitude: 35,
-      relevanceScore: 8,
-      summary: 'New pricing tier added for enterprise customers',
-      previousHash: 'abc123',
-      currentHash: 'def456'
-    },
-    {
-      timestamp: new Date(Date.now() - 86400000).toISOString(),
-      company: 'OpenAI',
-      url: 'https://openai.com/blog',
-      changeMagnitude: 15,
-      relevanceScore: 7,
-      summary: 'New blog post about GPT-5 capabilities',
-      previousHash: 'ghi789',
-      currentHash: 'jkl012'
-    },
-    {
-      timestamp: new Date(Date.now() - 172800000).toISOString(),
-      company: 'Google DeepMind',
-      url: 'https://deepmind.google',
-      changeMagnitude: 42,
-      relevanceScore: 9,
-      summary: 'Major announcement about Gemini 2.0 release',
-      previousHash: 'mno345',
-      currentHash: 'pqr678'
-    }
-  ];
-  
-  // Filter if URL provided
-  if (urlFilter) {
+    });
+    
+    // Sort changes by relevance score
+    allChanges.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+    
     return {
-      changes: changes.filter(c => c.url === urlFilter),
-      total: changes.filter(c => c.url === urlFilter).length
+      summary: {
+        significantChanges: significantChanges,
+        totalChecked: totalChecked,
+        aiProcessed: allChanges.length
+      },
+      changes: allChanges.slice(0, 10).map(change => ({
+        company: change.company,
+        url: change.url,
+        changeMagnitude: Math.round(change.changeMagnitude || 0),
+        relevanceScore: change.relevanceScore || 0,
+        summary: change.summary || 'Content updated'
+      }))
+    };
+  } catch (error) {
+    console.error('Error in processIntelligentMonitorReal:', error);
+    return {
+      summary: {
+        significantChanges: 0,
+        totalChecked: 0,
+        aiProcessed: 0
+      },
+      changes: [],
+      error: error.toString()
     };
   }
+}
+
+/**
+ * REAL function for extracted data
+ */
+function getExtractedDataReal() {
+  try {
+    const data = getStoredPageContent(50); // Get last 50 content entries
+    
+    return {
+      data: data.map(item => ({
+        timestamp: item.timestamp,
+        url: item.url,
+        title: item.title || 'N/A',
+        wordCount: item.wordCount || 0,
+        preview: item.preview || 'No preview available'
+      })),
+      total: data.length
+    };
+  } catch (error) {
+    console.error('Error in getExtractedDataReal:', error);
+    return {
+      data: [],
+      total: 0,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * REAL function for change history
+ */
+function getChangeHistoryReal(urlFilter) {
+  try {
+    let changes = getStoredChanges(100);
+    
+    // Filter by URL if provided
+    if (urlFilter) {
+      changes = changes.filter(c => c.url === urlFilter);
+    }
+    
+    return {
+      changes: changes.map(change => ({
+        timestamp: change.timestamp,
+        company: change.company,
+        url: change.url,
+        changeMagnitude: Math.round(change.changeMagnitude || 0),
+        relevanceScore: change.relevanceScore || 0,
+        summary: change.summary || 'Content updated',
+        previousHash: change.oldHash,
+        currentHash: change.newHash
+      })),
+      total: changes.length
+    };
+  } catch (error) {
+    console.error('Error in getChangeHistoryReal:', error);
+    return {
+      changes: [],
+      total: 0,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * REAL function for updating thresholds
+ */
+function updateThresholdsReal(updates) {
+  try {
+    console.log('Updating thresholds:', updates);
+    
+    // Update the configuration
+    if (updates.global) {
+      MONITOR_CONFIG.thresholds.global = updates.global;
+    }
+    
+    if (updates.company) {
+      Object.assign(MONITOR_CONFIG.thresholds.company, updates.company);
+    }
+    
+    if (updates.ai && updates.ai.alertThreshold) {
+      MONITOR_CONFIG.aiThresholds.alertThreshold = updates.ai.alertThreshold;
+    }
+    
+    // Save to properties
+    PropertiesService.getScriptProperties().setProperty(
+      'monitorConfig',
+      JSON.stringify(MONITOR_CONFIG)
+    );
+    
+    logActivity('Thresholds updated', 'success', updates);
+    
+    return {
+      success: true,
+      message: 'Thresholds updated successfully',
+      config: MONITOR_CONFIG.thresholds
+    };
+  } catch (error) {
+    console.error('Error updating thresholds:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * REAL function for updating selectors
+ */
+function updateSelectorsReal(selectors) {
+  try {
+    console.log('Updating selectors:', selectors);
+    
+    // Update the configuration
+    if (selectors.default) {
+      MONITOR_CONFIG.contentSelectors.default = selectors.default;
+    }
+    
+    if (selectors.exclude) {
+      MONITOR_CONFIG.contentSelectors.exclude = selectors.exclude;
+    }
+    
+    // Save to properties
+    PropertiesService.getScriptProperties().setProperty(
+      'monitorConfig',
+      JSON.stringify(MONITOR_CONFIG)
+    );
+    
+    logActivity('Selectors updated', 'success', selectors);
+    
+    return {
+      success: true,
+      message: 'Selectors updated successfully',
+      selectors: MONITOR_CONFIG.contentSelectors
+    };
+  } catch (error) {
+    console.error('Error updating selectors:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+// ============ CORE MONITORING FUNCTIONS ============
+
+/**
+ * Process all monitors (either baseline or monitoring mode)
+ */
+function processAllMonitors(config, isBaseline = false) {
+  const results = [];
+  
+  config.forEach(companyConfig => {
+    try {
+      const monitor = {
+        company: companyConfig.company,
+        urls: companyConfig.urls.map(u => u.url)
+      };
+      
+      const result = processIntelligentMonitor(monitor, isBaseline);
+      results.push(result);
+      
+      // Small delay between companies
+      Utilities.sleep(1000);
+      
+    } catch (error) {
+      console.error(`Error processing ${companyConfig.company}:`, error);
+      results.push({
+        company: companyConfig.company,
+        error: error.toString(),
+        urls: [],
+        changes: []
+      });
+    }
+  });
+  
+  return results;
+}
+
+/**
+ * Process intelligent monitor for a single company
+ */
+function processIntelligentMonitor(monitor, isBaseline = false) {
+  const results = {
+    company: monitor.company,
+    urls: [],
+    changes: [],
+    errors: []
+  };
+  
+  monitor.urls.forEach(url => {
+    try {
+      // Extract current content
+      const extraction = extractPageContent(url);
+      
+      if (!extraction.success) {
+        results.errors.push({
+          url: url,
+          error: extraction.error
+        });
+        return;
+      }
+      
+      if (isBaseline) {
+        // Store baseline
+        storeBaseline(monitor.company, url, extraction);
+        storePageContent(url, extraction);
+        
+        results.urls.push({
+          url: url,
+          status: 'baseline_created',
+          contentLength: extraction.contentLength
+        });
+      } else {
+        // Get baseline for comparison
+        const baseline = getBaselineForUrl(url);
+        
+        if (!baseline) {
+          // No baseline exists, create one
+          storeBaseline(monitor.company, url, extraction);
+          storePageContent(url, extraction);
+          
+          results.urls.push({
+            url: url,
+            status: 'baseline_created',
+            contentLength: extraction.contentLength
+          });
+        } else {
+          // Compare with baseline
+          if (baseline.contentHash !== extraction.contentHash) {
+            // Content changed!
+            const changeMagnitude = calculateChangeMagnitude(baseline.content, extraction.content);
+            const relevanceScore = calculateRelevanceScore(baseline.content, extraction.content, url);
+            
+            const change = {
+              company: monitor.company,
+              url: url,
+              oldHash: baseline.contentHash,
+              newHash: extraction.contentHash,
+              changeMagnitude: changeMagnitude,
+              relevanceScore: relevanceScore,
+              summary: generateChangeSummary(baseline.content, extraction.content),
+              timestamp: new Date().toISOString()
+            };
+            
+            results.changes.push(change);
+            
+            // Store the change
+            storeChange(change);
+            
+            // Update baseline
+            storeBaseline(monitor.company, url, extraction);
+            storePageContent(url, extraction);
+            
+            results.urls.push({
+              url: url,
+              status: 'changed',
+              changeMagnitude: changeMagnitude,
+              relevanceScore: relevanceScore,
+              alert: relevanceScore >= INTELLIGENT_CONFIG.relevanceThreshold
+            });
+          } else {
+            results.urls.push({
+              url: url,
+              status: 'unchanged'
+            });
+          }
+        }
+      }
+      
+      // Respect crawl delay
+      Utilities.sleep(INTELLIGENT_CONFIG.crawlDelay);
+      
+    } catch (error) {
+      results.errors.push({
+        url: url,
+        error: error.toString()
+      });
+    }
+  });
+  
+  return results;
+}
+
+/**
+ * Extract content from a URL
+ */
+function extractPageContent(url) {
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      validateHttpsCertificates: true
+    });
+    
+    const statusCode = response.getResponseCode();
+    if (statusCode !== 200) {
+      return {
+        success: false,
+        error: `HTTP ${statusCode}`,
+        url: url
+      };
+    }
+    
+    const html = response.getContentText();
+    const textContent = extractTextFromHtml(html);
+    
+    const contentHash = Utilities.computeDigest(
+      Utilities.DigestAlgorithm.MD5, 
+      textContent
+    ).map(byte => (byte & 0xFF).toString(16).padStart(2, '0')).join('');
+    
+    return {
+      success: true,
+      url: url,
+      content: textContent.substring(0, INTELLIGENT_CONFIG.maxContentLength),
+      contentLength: textContent.length,
+      contentHash: contentHash,
+      extractedAt: new Date().toISOString()
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString(),
+      url: url
+    };
+  }
+}
+
+/**
+ * Extract clean text from HTML
+ */
+function extractTextFromHtml(html) {
+  // Remove scripts, styles, and navigation elements
+  html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  html = html.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+  html = html.replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '');
+  html = html.replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, '');
+  html = html.replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '');
+  
+  // Remove HTML tags
+  html = html.replace(/<[^>]+>/g, ' ');
+  
+  // Decode HTML entities
+  html = html.replace(/&nbsp;/g, ' ');
+  html = html.replace(/&amp;/g, '&');
+  html = html.replace(/&lt;/g, '<');
+  html = html.replace(/&gt;/g, '>');
+  html = html.replace(/&quot;/g, '"');
+  html = html.replace(/&#39;/g, "'");
+  
+  // Clean up whitespace
+  html = html.replace(/\s+/g, ' ');
+  html = html.trim();
+  
+  return html;
+}
+
+/**
+ * Calculate change magnitude using simple word difference
+ */
+function calculateChangeMagnitude(oldContent, newContent) {
+  if (!oldContent) return 100;
+  
+  const oldWords = oldContent.split(/\s+/);
+  const newWords = newContent.split(/\s+/);
+  
+  // Simple difference calculation
+  const maxLength = Math.max(oldWords.length, newWords.length);
+  if (maxLength === 0) return 0;
+  
+  const minLength = Math.min(oldWords.length, newWords.length);
+  const sizeDiff = Math.abs(oldWords.length - newWords.length);
+  
+  // Calculate rough percentage change
+  const changePercent = (sizeDiff / maxLength) * 100;
+  
+  return Math.round(changePercent * 100) / 100;
+}
+
+/**
+ * Calculate relevance score for a change
+ */
+function calculateRelevanceScore(oldContent, newContent, url) {
+  let score = 5; // Start with middle score
+  
+  // Check for high-value keywords
+  INTELLIGENT_CONFIG.keywords.high.forEach(keyword => {
+    const oldCount = (oldContent.match(new RegExp(keyword, 'gi')) || []).length;
+    const newCount = (newContent.match(new RegExp(keyword, 'gi')) || []).length;
+    if (newCount > oldCount) {
+      score += 2;
+    }
+  });
+  
+  // Check for medium-value keywords
+  INTELLIGENT_CONFIG.keywords.medium.forEach(keyword => {
+    const oldCount = (oldContent.match(new RegExp(keyword, 'gi')) || []).length;
+    const newCount = (newContent.match(new RegExp(keyword, 'gi')) || []).length;
+    if (newCount > oldCount) {
+      score += 1;
+    }
+  });
+  
+  // Apply page type weight
+  const pageType = identifyPageType(url);
+  const weight = INTELLIGENT_CONFIG.pageWeights[pageType] || 1.0;
+  score = Math.round(score * weight);
+  
+  return Math.max(1, Math.min(10, score));
+}
+
+/**
+ * Identify page type from URL
+ */
+function identifyPageType(url) {
+  const urlLower = url.toLowerCase();
+  
+  if (urlLower.includes('/pricing')) return 'pricing';
+  if (urlLower.includes('/blog')) return 'blog';
+  if (urlLower.includes('/news')) return 'news';
+  if (urlLower.includes('/feature')) return 'features';
+  if (urlLower.includes('/product')) return 'products';
+  if (urlLower.includes('/technology')) return 'technology';
+  if (urlLower.includes('/announcement')) return 'announcement';
+  if (urlLower.endsWith('/') || urlLower.includes('/index')) return 'homepage';
+  
+  return 'other';
+}
+
+/**
+ * Generate simple change summary
+ */
+function generateChangeSummary(oldContent, newContent) {
+  const oldLength = oldContent ? oldContent.length : 0;
+  const newLength = newContent ? newContent.length : 0;
+  
+  if (newLength > oldLength * 1.2) {
+    return 'Content significantly expanded';
+  } else if (newLength < oldLength * 0.8) {
+    return 'Content significantly reduced';
+  } else {
+    return 'Content modified';
+  }
+}
+
+// ============ DATA STORAGE FUNCTIONS ============
+
+/**
+ * Get or create the monitoring spreadsheet
+ */
+function getOrCreateMonitorSheet() {
+  let sheet;
+  const files = DriveApp.getFilesByName('AI Competitor Monitor Data');
+  
+  if (files.hasNext()) {
+    const file = files.next();
+    sheet = SpreadsheetApp.openById(file.getId());
+  } else {
+    sheet = SpreadsheetApp.create('AI Competitor Monitor Data');
+  }
+  
+  // Ensure required sheets exist
+  createRequiredSheets(sheet);
   
   return {
-    changes: changes,
-    total: changes.length
+    spreadsheet: sheet,
+    baselines: sheet.getSheetByName('Baselines'),
+    changes: sheet.getSheetByName('Changes'),
+    pageContent: sheet.getSheetByName('PageContent'),
+    logs: sheet.getSheetByName('Logs')
   };
 }
 
 /**
- * Mock function for updating thresholds
+ * Create required sheets
  */
-function updateThresholdsMock(updates) {
-  console.log('Updating thresholds:', updates);
-  return {
-    success: true,
-    message: 'Thresholds updated successfully'
-  };
+function createRequiredSheets(spreadsheet) {
+  const requiredSheets = ['Baselines', 'Changes', 'PageContent', 'Logs'];
+  
+  requiredSheets.forEach(sheetName => {
+    if (!spreadsheet.getSheetByName(sheetName)) {
+      const sheet = spreadsheet.insertSheet(sheetName);
+      
+      // Add headers based on sheet type
+      if (sheetName === 'Baselines') {
+        sheet.getRange(1, 1, 1, 6).setValues([['URL', 'Company', 'Content Hash', 'Content Length', 'Created', 'Last Updated']]);
+      } else if (sheetName === 'Changes') {
+        sheet.getRange(1, 1, 1, 8).setValues([['Timestamp', 'Company', 'URL', 'Old Hash', 'New Hash', 'Change Magnitude', 'Relevance Score', 'Summary']]);
+      } else if (sheetName === 'PageContent') {
+        sheet.getRange(1, 1, 1, 6).setValues([['URL', 'Timestamp', 'Content Hash', 'Title', 'Word Count', 'Preview']]);
+      } else if (sheetName === 'Logs') {
+        sheet.getRange(1, 1, 1, 4).setValues([['Timestamp', 'Type', 'Message', 'Data']]);
+      }
+      
+      sheet.getRange(1, 1, 1, sheet.getLastColumn()).setFontWeight('bold');
+    }
+  });
 }
 
 /**
- * Mock function for updating selectors
+ * Store baseline for a URL
  */
-function updateSelectorsMock(selectors) {
-  console.log('Updating selectors:', selectors);
-  return {
-    success: true,
-    message: 'Selectors updated successfully'
-  };
+function storeBaseline(company, url, extraction) {
+  try {
+    const sheets = getOrCreateMonitorSheet();
+    const baseline = sheets.baselines;
+    
+    // Check if baseline exists
+    const data = baseline.getDataRange().getValues();
+    let found = false;
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === url) {
+        // Update existing baseline
+        baseline.getRange(i + 1, 3, 1, 4).setValues([[
+          extraction.contentHash,
+          extraction.contentLength,
+          data[i][4], // Keep original created date
+          new Date().toISOString()
+        ]]);
+        found = true;
+        break;
+      }
+    }
+    
+    if (!found) {
+      // Add new baseline
+      baseline.appendRow([
+        url,
+        company,
+        extraction.contentHash,
+        extraction.contentLength,
+        new Date().toISOString(),
+        new Date().toISOString()
+      ]);
+    }
+    
+  } catch (error) {
+    console.error('Error storing baseline:', error);
+  }
+}
+
+/**
+ * Get baseline for a URL
+ */
+function getBaselineForUrl(url) {
+  try {
+    const sheets = getOrCreateMonitorSheet();
+    const baseline = sheets.baselines;
+    
+    const data = baseline.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === url) {
+        return {
+          contentHash: data[i][2],
+          contentLength: data[i][3],
+          content: '', // We don't store full content in baselines
+          created: data[i][4],
+          lastUpdated: data[i][5]
+        };
+      }
+    }
+    
+    return null;
+    
+  } catch (error) {
+    console.error('Error getting baseline:', error);
+    return null;
+  }
+}
+
+/**
+ * Store page content
+ */
+function storePageContent(url, extraction) {
+  try {
+    const sheets = getOrCreateMonitorSheet();
+    const contentSheet = sheets.pageContent;
+    
+    const title = extraction.title || 'N/A';
+    const wordCount = extraction.content ? extraction.content.split(/\s+/).length : 0;
+    const preview = extraction.content ? extraction.content.substring(0, 500) : 'N/A';
+    
+    contentSheet.appendRow([
+      url,
+      extraction.extractedAt,
+      extraction.contentHash,
+      title,
+      wordCount,
+      preview
+    ]);
+    
+    // Keep only last 100 entries per URL to manage sheet size
+    cleanOldContent(contentSheet, url, 100);
+    
+  } catch (error) {
+    console.error('Error storing page content:', error);
+  }
+}
+
+/**
+ * Store detected change
+ */
+function storeChange(change) {
+  try {
+    const sheets = getOrCreateMonitorSheet();
+    const changesSheet = sheets.changes;
+    
+    changesSheet.appendRow([
+      change.timestamp,
+      change.company,
+      change.url,
+      change.oldHash,
+      change.newHash,
+      change.changeMagnitude,
+      change.relevanceScore,
+      change.summary
+    ]);
+    
+    logActivity('Change detected', 'info', change);
+    
+  } catch (error) {
+    console.error('Error storing change:', error);
+  }
+}
+
+/**
+ * Get stored changes
+ */
+function getStoredChanges(limit = 50) {
+  try {
+    const sheets = getOrCreateMonitorSheet();
+    const changesSheet = sheets.changes;
+    
+    const data = changesSheet.getDataRange().getValues();
+    const headers = data[0];
+    const changes = [];
+    
+    // Get last N changes (excluding header)
+    const startRow = Math.max(1, data.length - limit);
+    
+    for (let i = data.length - 1; i >= startRow; i--) {
+      changes.push({
+        timestamp: data[i][0],
+        company: data[i][1],
+        url: data[i][2],
+        oldHash: data[i][3],
+        newHash: data[i][4],
+        changeMagnitude: data[i][5],
+        relevanceScore: data[i][6],
+        summary: data[i][7]
+      });
+    }
+    
+    return changes;
+    
+  } catch (error) {
+    console.error('Error getting stored changes:', error);
+    return [];
+  }
+}
+
+/**
+ * Get stored page content
+ */
+function getStoredPageContent(limit = 50) {
+  try {
+    const sheets = getOrCreateMonitorSheet();
+    const contentSheet = sheets.pageContent;
+    
+    const data = contentSheet.getDataRange().getValues();
+    const content = [];
+    
+    // Get last N content entries (excluding header)
+    const startRow = Math.max(1, data.length - limit);
+    
+    for (let i = data.length - 1; i >= startRow; i--) {
+      content.push({
+        url: data[i][0],
+        timestamp: data[i][1],
+        contentHash: data[i][2],
+        title: data[i][3],
+        wordCount: data[i][4],
+        preview: data[i][5]
+      });
+    }
+    
+    return content;
+    
+  } catch (error) {
+    console.error('Error getting stored content:', error);
+    return [];
+  }
+}
+
+/**
+ * Log activity
+ */
+function logActivity(message, type = 'info', data = null) {
+  try {
+    const sheets = getOrCreateMonitorSheet();
+    const logsSheet = sheets.logs;
+    
+    logsSheet.appendRow([
+      new Date().toISOString(),
+      type,
+      message,
+      data ? JSON.stringify(data) : ''
+    ]);
+    
+    console.log(`[${type.toUpperCase()}] ${message}`, data);
+    
+  } catch (error) {
+    console.error('Error logging activity:', error);
+  }
+}
+
+/**
+ * Get stored logs
+ */
+function getStoredLogs(limit = 50) {
+  try {
+    const sheets = getOrCreateMonitorSheet();
+    const logsSheet = sheets.logs;
+    
+    const data = logsSheet.getDataRange().getValues();
+    const logs = [];
+    
+    // Get last N logs (excluding header)
+    const startRow = Math.max(1, data.length - limit);
+    
+    for (let i = data.length - 1; i >= startRow; i--) {
+      logs.push({
+        timestamp: data[i][0],
+        type: data[i][1],
+        message: data[i][2],
+        data: data[i][3]
+      });
+    }
+    
+    return logs;
+    
+  } catch (error) {
+    console.error('Error getting stored logs:', error);
+    return [{
+      timestamp: new Date().toISOString(),
+      type: 'info',
+      message: 'AI Competitor Monitor system operational',
+      data: ''
+    }];
+  }
+}
+
+/**
+ * Clean old content to manage sheet size
+ */
+function cleanOldContent(sheet, url, keepLast) {
+  try {
+    const data = sheet.getDataRange().getValues();
+    const urlEntries = [];
+    
+    // Find all entries for this URL
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === url) {
+        urlEntries.push(i);
+      }
+    }
+    
+    // If we have more than keepLast entries, delete the oldest
+    if (urlEntries.length > keepLast) {
+      const toDelete = urlEntries.slice(0, urlEntries.length - keepLast);
+      
+      // Delete from bottom to top to maintain row indices
+      toDelete.reverse().forEach(rowIndex => {
+        sheet.deleteRow(rowIndex + 1);
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error cleaning old content:', error);
+  }
 }
 
 /**
  * Test function
  */
 function testWebApp() {
-  console.log('Testing WebApp v47...');
+  console.log('Testing Enhanced WebApp...');
+  
+  // Test configuration
+  const config = getCompleteMonitorConfig();
+  console.log('Config loaded:', config.length, 'companies');
+  
+  // Test a single URL extraction
+  const testUrl = 'https://anthropic.com';
+  const extraction = extractPageContent(testUrl);
+  console.log('Test extraction:', extraction.success ? 'Success' : extraction.error);
   
   // Simulate a request
   const mockRequest = {
@@ -643,5 +1444,5 @@ function testWebApp() {
   const response = doGet(mockRequest);
   console.log('Response:', response.getContent());
   
-  return 'Test complete';
+  return 'Enhanced test complete';
 }
