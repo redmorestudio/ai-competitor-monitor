@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Competitor Monitor</title>
+    <title>AI Competitor Monitor - Enhanced Dashboard</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -13,7 +13,7 @@
             padding: 0;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -32,6 +32,40 @@
             color: #888;
             margin-top: 10px;
         }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            border-bottom: 2px solid #0f4c75;
+        }
+        .tab {
+            background: transparent;
+            color: #888;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+        .tab.active {
+            color: #3bb4f1;
+            border-bottom-color: #3bb4f1;
+        }
+        .tab:hover {
+            color: #3bb4f1;
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Auth Section */
         .auth-section {
             background: #16213e;
             padding: 20px;
@@ -42,15 +76,23 @@
         .auth-section h2 {
             margin-top: 0;
         }
-        input[type="password"] {
+        
+        /* Form Controls */
+        input[type="text"],
+        input[type="number"],
+        input[type="password"],
+        select,
+        textarea {
             background: #1a1a2e;
             border: 1px solid #0f4c75;
             color: #eee;
             padding: 10px;
             border-radius: 4px;
-            width: 200px;
-            margin-right: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            margin: 5px 0;
         }
+        
         button {
             background: #3bb4f1;
             color: white;
@@ -64,12 +106,16 @@
         button:hover {
             background: #2a9fd8;
         }
+        
+        /* Controls */
         .controls {
             display: flex;
             gap: 10px;
             margin: 20px 0;
             flex-wrap: wrap;
         }
+        
+        /* Status Grid */
         .status-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -93,6 +139,135 @@
             text-transform: uppercase;
             font-size: 0.9em;
         }
+        
+        /* Configuration Section */
+        .config-section {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #0f4c75;
+        }
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .config-item {
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #0f4c75;
+        }
+        .config-item h4 {
+            margin-top: 0;
+            color: #3bb4f1;
+        }
+        
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            background: #16213e;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .data-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th {
+            background: #0f4c75;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: normal;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #0f4c75;
+        }
+        .data-table tr:hover {
+            background: #1a1a2e;
+        }
+        
+        /* Change Viewer */
+        .change-viewer {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #0f4c75;
+        }
+        .diff-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .diff-side {
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #0f4c75;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .diff-added {
+            background: rgba(39, 174, 96, 0.2);
+            color: #2ecc71;
+        }
+        .diff-removed {
+            background: rgba(192, 57, 43, 0.2);
+            color: #e74c3c;
+        }
+        
+        /* Threshold Indicators */
+        .threshold-indicator {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+        .threshold-low {
+            background: #27ae60;
+            color: white;
+        }
+        .threshold-medium {
+            background: #f39c12;
+            color: white;
+        }
+        .threshold-high {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        /* AI Score */
+        .ai-score {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            color: white;
+        }
+        .ai-score-low {
+            background: #95a5a6;
+        }
+        .ai-score-medium {
+            background: #f39c12;
+        }
+        .ai-score-high {
+            background: #e74c3c;
+        }
+        
+        /* Messages */
         .error {
             background: #c0392b;
             color: white;
@@ -107,6 +282,15 @@
             border-radius: 4px;
             margin: 20px 0;
         }
+        .info {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        
+        /* Log Area */
         .log-area {
             background: #0f0f23;
             border: 1px solid #0f4c75;
@@ -114,12 +298,38 @@
             padding: 10px;
             font-family: monospace;
             font-size: 12px;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
             margin: 20px 0;
         }
+        
+        /* Utilities */
         .hidden {
             display: none;
+        }
+        .mb-10 {
+            margin-bottom: 10px;
+        }
+        .flex {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3bb4f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -133,51 +343,220 @@
         <div class="auth-section">
             <h2>Authentication</h2>
             <p>Enter your API token to access the monitoring system:</p>
-            <input type="password" id="apiToken" placeholder="Enter API token">
-            <button onclick="saveToken()">Save Token</button>
-        </div>
-        
-        <div class="controls">
-            <button onclick="checkStatus()">Check Status</button>
-            <button onclick="generateBaseline()">Generate Baseline</button>
-            <button onclick="runMonitorCheck()">Run Monitor Check</button>
-            <button onclick="getConfiguration()">Get Configuration</button>
-            <button onclick="viewLogs()">View Logs</button>
-        </div>
-        
-        <h2>System Status</h2>
-        <div class="status-grid">
-            <div class="status-card">
-                <div class="status-value" id="systemStatus">checking...</div>
-                <div class="status-label">STATUS</div>
-            </div>
-            <div class="status-card">
-                <div class="status-value" id="companyCount">0</div>
-                <div class="status-label">COMPANIES</div>
-            </div>
-            <div class="status-card">
-                <div class="status-value" id="urlCount">0</div>
-                <div class="status-label">URLS TRACKED</div>
-            </div>
-            <div class="status-card">
-                <div class="status-value" id="lastCheck">Never</div>
-                <div class="status-label">LAST CHECK</div>
+            <div class="flex">
+                <input type="password" id="apiToken" placeholder="Enter API token" style="width: 300px;">
+                <button onclick="saveToken()">Save Token</button>
             </div>
         </div>
         
-        <div id="messageArea"></div>
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab" onclick="switchTab('extracted')">Extracted Data</button>
+            <button class="tab" onclick="switchTab('changes')">Change History</button>
+            <button class="tab" onclick="switchTab('config')">Configuration</button>
+            <button class="tab" onclick="switchTab('logs')">System Logs</button>
+        </div>
         
-        <div class="log-area hidden" id="logArea"></div>
+        <!-- Dashboard Tab -->
+        <div id="dashboard-tab" class="tab-content active">
+            <div class="controls">
+                <button onclick="checkStatus()">🔄 Refresh Status</button>
+                <button onclick="generateBaseline()">📊 Generate Baseline</button>
+                <button onclick="runMonitorCheck()">🔍 Run Monitor Check</button>
+                <button onclick="runIntelligentMonitor()">🧠 Run AI Analysis</button>
+            </div>
+            
+            <h2>System Status</h2>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-value" id="systemStatus">checking...</div>
+                    <div class="status-label">STATUS</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="companyCount">0</div>
+                    <div class="status-label">COMPANIES</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="urlCount">0</div>
+                    <div class="status-label">URLS TRACKED</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="lastCheck">Never</div>
+                    <div class="status-label">LAST CHECK</div>
+                </div>
+            </div>
+            
+            <div id="messageArea"></div>
+            
+            <!-- Recent Changes Summary -->
+            <div class="change-viewer">
+                <h3>Recent Significant Changes</h3>
+                <div id="recentChanges">
+                    <p style="color: #888;">No recent changes detected.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Extracted Data Tab -->
+        <div id="extracted-tab" class="tab-content">
+            <h2>Extracted Content</h2>
+            <button onclick="loadExtractedData()" class="mb-10">🔄 Refresh Data</button>
+            
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>URL</th>
+                            <th>Title</th>
+                            <th>Word Count</th>
+                            <th>Preview</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="extractedDataTable">
+                        <tr><td colspan="6" style="text-align: center; color: #888;">Click refresh to load data</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Change History Tab -->
+        <div id="changes-tab" class="tab-content">
+            <h2>Change History</h2>
+            <div class="flex mb-10">
+                <select id="changeUrlFilter" style="width: 300px;">
+                    <option value="">All URLs</option>
+                </select>
+                <button onclick="loadChangeHistory()">🔄 Load Changes</button>
+            </div>
+            
+            <div class="data-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Company</th>
+                            <th>URL</th>
+                            <th>Change %</th>
+                            <th>AI Score</th>
+                            <th>Summary</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="changeHistoryTable">
+                        <tr><td colspan="7" style="text-align: center; color: #888;">Select URL and load changes</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Diff Viewer -->
+            <div class="change-viewer hidden" id="diffViewer">
+                <h3>Change Comparison</h3>
+                <div class="diff-container">
+                    <div class="diff-side">
+                        <h4>Previous Version</h4>
+                        <div id="diffBefore"></div>
+                    </div>
+                    <div class="diff-side">
+                        <h4>Current Version</h4>
+                        <div id="diffAfter"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Configuration Tab -->
+        <div id="config-tab" class="tab-content">
+            <h2>Configuration Management</h2>
+            
+            <!-- Threshold Configuration -->
+            <div class="config-section">
+                <h3>Change Detection Thresholds</h3>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <h4>Global Threshold</h4>
+                        <input type="number" id="globalThreshold" min="1" max="100" value="25">
+                        <label>% change to trigger alert</label>
+                    </div>
+                    <div class="config-item">
+                        <h4>AI Alert Threshold</h4>
+                        <input type="number" id="aiThreshold" min="1" max="10" value="6">
+                        <label>Minimum AI score (1-10)</label>
+                    </div>
+                </div>
+                
+                <h4>Company-Specific Thresholds</h4>
+                <div id="companyThresholds" class="config-grid"></div>
+                
+                <h4>Page-Specific Rules</h4>
+                <div id="pageThresholds" class="config-grid"></div>
+                
+                <button onclick="saveThresholds()">💾 Save Thresholds</button>
+            </div>
+            
+            <!-- Monitor Configuration -->
+            <div class="config-section">
+                <h3>Monitored Companies</h3>
+                <div id="monitorList"></div>
+                <button onclick="addMonitor()">➕ Add Company</button>
+            </div>
+            
+            <!-- CSS Selectors -->
+            <div class="config-section">
+                <h3>Content Extraction Selectors</h3>
+                <div class="config-item">
+                    <h4>Default Content Selector</h4>
+                    <input type="text" id="defaultSelector" value="main, article, .content, #content">
+                </div>
+                <div class="config-item">
+                    <h4>Exclude Selector</h4>
+                    <input type="text" id="excludeSelector" value="nav, header, footer, .sidebar, .ads">
+                </div>
+                <button onclick="saveSelectors()">💾 Save Selectors</button>
+            </div>
+        </div>
+        
+        <!-- System Logs Tab -->
+        <div id="logs-tab" class="tab-content">
+            <h2>System Logs</h2>
+            <button onclick="loadLogs()">🔄 Refresh Logs</button>
+            <div class="log-area" id="logArea"></div>
+        </div>
     </div>
     
     <script>
-        const API_BASE = 'https://script.google.com/macros/s/AKfycbwoOfIKCXXoV_TX6qk6ov7EbsGVI7JXQOwlRwvgmU6kKilwnbVRzyC5XAK8RWvRJVux1g/exec';
+        // Update API endpoint to latest version
+        const API_BASE = 'https://script.google.com/macros/s/AKfycbxt4Wkdxk7HLKC_VllYgpjHgntBckt_WCjTMDX9BJ_UHBlpTGrjNjLcpHqPJCerBAtT/exec';
         let apiToken = localStorage.getItem('apiToken') || '';
+        let currentConfig = null;
+        let currentMonitors = [];
         
         // Initialize
         if (apiToken) {
             document.getElementById('apiToken').value = apiToken;
             checkStatus();
+        }
+        
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Load tab-specific data
+            if (tabName === 'config' && currentConfig === null) {
+                loadConfiguration();
+            }
         }
         
         function saveToken() {
@@ -191,7 +570,7 @@
             const messageArea = document.getElementById('messageArea');
             messageArea.innerHTML = `<div class="${type}">${message}</div>`;
             if (type === 'success') {
-                setTimeout(() => messageArea.innerHTML = '', 3000);
+                setTimeout(() => messageArea.innerHTML = '', 5000);
             }
         }
         
@@ -226,8 +605,6 @@
                 // Update counts
                 if (data.configuration) {
                     document.getElementById('companyCount').textContent = data.configuration.monitorsConfigured || 0;
-                    // Calculate URL count from config
-                    getConfiguration();
                 }
                 
                 // Update last check
@@ -236,15 +613,93 @@
                     document.getElementById('lastCheck').textContent = date.toLocaleString();
                 }
                 
-                showMessage('Status check completed', 'success');
+                // Load configuration to get URL count
+                await loadConfiguration();
+                
             } catch (error) {
                 document.getElementById('systemStatus').textContent = 'error';
             }
         }
         
+        async function loadConfiguration() {
+            try {
+                const data = await makeRequest('config');
+                currentConfig = data.config;
+                currentMonitors = data.monitors || [];
+                
+                // Update URL count
+                const totalUrls = currentMonitors.reduce((sum, m) => sum + (m.urls ? m.urls.length : 0), 0);
+                document.getElementById('urlCount').textContent = totalUrls;
+                document.getElementById('companyCount').textContent = currentMonitors.length;
+                
+                // Update configuration UI
+                if (currentConfig) {
+                    updateConfigUI();
+                }
+                
+                // Update URL filter dropdown
+                updateUrlFilter();
+                
+            } catch (error) {
+                console.error('Failed to load configuration:', error);
+            }
+        }
+        
+        function updateConfigUI() {
+            if (!currentConfig) return;
+            
+            // Update threshold inputs
+            if (currentConfig.thresholds) {
+                document.getElementById('globalThreshold').value = currentConfig.thresholds.global || 25;
+            }
+            if (currentConfig.aiThresholds) {
+                document.getElementById('aiThreshold').value = currentConfig.aiThresholds.alertThreshold || 6;
+            }
+            
+            // Update company thresholds
+            const companyDiv = document.getElementById('companyThresholds');
+            companyDiv.innerHTML = currentMonitors.map(monitor => `
+                <div class="config-item">
+                    <h4>${monitor.company}</h4>
+                    <input type="number" id="threshold-${monitor.company.replace(/\s+/g, '-')}" 
+                           min="1" max="100" 
+                           value="${currentConfig.thresholds?.company?.[monitor.company] || currentConfig.thresholds?.global || 25}">
+                    <label>% change threshold</label>
+                </div>
+            `).join('');
+            
+            // Update monitor list
+            const monitorDiv = document.getElementById('monitorList');
+            monitorDiv.innerHTML = currentMonitors.map(monitor => `
+                <div class="config-item">
+                    <h4>${monitor.company}</h4>
+                    <p>URLs: ${monitor.urls.join(', ')}</p>
+                    <button onclick="editMonitor('${monitor.company}')">Edit</button>
+                    <button onclick="removeMonitor('${monitor.company}')">Remove</button>
+                </div>
+            `).join('');
+            
+            // Update selectors
+            if (currentConfig.contentSelectors) {
+                document.getElementById('defaultSelector').value = currentConfig.contentSelectors.default || '';
+                document.getElementById('excludeSelector').value = currentConfig.contentSelectors.exclude || '';
+            }
+        }
+        
+        function updateUrlFilter() {
+            const select = document.getElementById('changeUrlFilter');
+            select.innerHTML = '<option value="">All URLs</option>';
+            
+            currentMonitors.forEach(monitor => {
+                monitor.urls.forEach(url => {
+                    select.innerHTML += `<option value="${url}">${monitor.company} - ${url}</option>`;
+                });
+            });
+        }
+        
         async function generateBaseline() {
             try {
-                showMessage('Generating baseline... this may take a few minutes', 'success');
+                showMessage('Generating baseline... this may take a few minutes', 'info');
                 const data = await makeRequest('baseline');
                 showMessage(`Baseline generated: ${data.companies} companies processed`, 'success');
                 checkStatus();
@@ -255,34 +710,176 @@
         
         async function runMonitorCheck() {
             try {
-                showMessage('Running monitor check... this may take a few minutes', 'success');
+                showMessage('Running monitor check... this may take a few minutes', 'info');
                 const data = await makeRequest('monitor', { checkAll: true });
                 showMessage(`Monitor check completed: ${data.relevantChanges || 0} changes detected`, 'success');
                 checkStatus();
+                loadRecentChanges();
             } catch (error) {
                 showMessage(`Monitor check failed: ${error.message}`);
             }
         }
         
-        async function getConfiguration() {
+        async function runIntelligentMonitor() {
             try {
-                const data = await makeRequest('config');
-                if (data.monitors) {
-                    const totalUrls = data.monitors.reduce((sum, m) => sum + (m.urls ? m.urls.length : 0), 0);
-                    document.getElementById('urlCount').textContent = totalUrls;
-                    document.getElementById('companyCount').textContent = data.monitors.length;
-                    showMessage(`Configuration loaded: ${data.monitors.length} companies`, 'success');
-                }
+                showMessage('Running AI-powered analysis... this may take several minutes', 'info');
+                const data = await makeRequest('execute', { 
+                    functionName: 'processIntelligentMonitor',
+                    parameters: JSON.stringify([{ company: 'all' }])
+                });
+                showMessage(`AI analysis completed: ${data.result?.summary?.significantChanges || 0} significant changes detected`, 'success');
+                checkStatus();
+                loadRecentChanges();
             } catch (error) {
-                showMessage(`Failed to load configuration: ${error.message}`);
+                showMessage(`AI analysis failed: ${error.message}`);
             }
         }
         
-        async function viewLogs() {
+        async function loadExtractedData() {
             try {
-                const data = await makeRequest('logs', { limit: 50 });
+                const data = await makeRequest('execute', {
+                    functionName: 'getExtractedData',
+                    parameters: '[]'
+                });
+                
+                const tbody = document.getElementById('extractedDataTable');
+                if (data.result?.data && data.result.data.length > 0) {
+                    tbody.innerHTML = data.result.data.map(item => `
+                        <tr>
+                            <td>${new Date(item.timestamp).toLocaleString()}</td>
+                            <td><a href="${item.url}" target="_blank">${item.url}</a></td>
+                            <td>${item.title || 'N/A'}</td>
+                            <td>${item.wordCount || 0}</td>
+                            <td>${item.preview?.substring(0, 100)}...</td>
+                            <td><button onclick="viewContent('${item.url}', '${item.timestamp}')">View</button></td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">No extracted data found</td></tr>';
+                }
+            } catch (error) {
+                console.error('Failed to load extracted data:', error);
+            }
+        }
+        
+        async function loadChangeHistory() {
+            try {
+                const urlFilter = document.getElementById('changeUrlFilter').value;
+                const data = await makeRequest('execute', {
+                    functionName: 'getChangeHistory',
+                    parameters: JSON.stringify([urlFilter])
+                });
+                
+                const tbody = document.getElementById('changeHistoryTable');
+                if (data.result?.changes && data.result.changes.length > 0) {
+                    tbody.innerHTML = data.result.changes.map(change => {
+                        const aiScoreClass = change.relevanceScore >= 8 ? 'ai-score-high' : 
+                                           change.relevanceScore >= 6 ? 'ai-score-medium' : 'ai-score-low';
+                        return `
+                            <tr>
+                                <td>${new Date(change.timestamp).toLocaleString()}</td>
+                                <td>${change.company}</td>
+                                <td><a href="${change.url}" target="_blank">${change.url.substring(0, 50)}...</a></td>
+                                <td><span class="threshold-indicator ${getThresholdClass(change.changeMagnitude)}">${change.changeMagnitude || 0}%</span></td>
+                                <td><span class="ai-score ${aiScoreClass}">${change.relevanceScore || 0}</span></td>
+                                <td>${change.summary || 'N/A'}</td>
+                                <td><button onclick="viewDiff('${change.url}', '${change.timestamp}')">View Diff</button></td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #888;">No changes found</td></tr>';
+                }
+            } catch (error) {
+                console.error('Failed to load change history:', error);
+            }
+        }
+        
+        async function loadRecentChanges() {
+            try {
+                const data = await makeRequest('execute', {
+                    functionName: 'getChangeHistory',
+                    parameters: JSON.stringify([''])
+                });
+                
+                const container = document.getElementById('recentChanges');
+                if (data.result?.changes && data.result.changes.length > 0) {
+                    const recentChanges = data.result.changes.slice(0, 5);
+                    container.innerHTML = recentChanges.map(change => `
+                        <div class="config-item">
+                            <h4>${change.company} - ${new Date(change.timestamp).toLocaleString()}</h4>
+                            <p><strong>URL:</strong> ${change.url}</p>
+                            <p><strong>Change:</strong> ${change.changeMagnitude || 0}% | <strong>AI Score:</strong> ${change.relevanceScore || 0}/10</p>
+                            <p><strong>Summary:</strong> ${change.summary || 'N/A'}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p style="color: #888;">No recent changes detected.</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load recent changes:', error);
+            }
+        }
+        
+        function getThresholdClass(magnitude) {
+            if (magnitude >= 50) return 'threshold-high';
+            if (magnitude >= 25) return 'threshold-medium';
+            return 'threshold-low';
+        }
+        
+        async function saveThresholds() {
+            try {
+                const updates = {
+                    global: parseInt(document.getElementById('globalThreshold').value),
+                    company: {},
+                    ai: {
+                        alertThreshold: parseInt(document.getElementById('aiThreshold').value)
+                    }
+                };
+                
+                // Collect company thresholds
+                currentMonitors.forEach(monitor => {
+                    const input = document.getElementById(`threshold-${monitor.company.replace(/\s+/g, '-')}`);
+                    if (input) {
+                        updates.company[monitor.company] = parseInt(input.value);
+                    }
+                });
+                
+                await makeRequest('execute', {
+                    functionName: 'updateThresholds',
+                    parameters: JSON.stringify([updates])
+                });
+                
+                showMessage('Thresholds saved successfully', 'success');
+                loadConfiguration();
+            } catch (error) {
+                showMessage(`Failed to save thresholds: ${error.message}`);
+            }
+        }
+        
+        async function saveSelectors() {
+            try {
+                const updates = {
+                    default: document.getElementById('defaultSelector').value,
+                    exclude: document.getElementById('excludeSelector').value
+                };
+                
+                await makeRequest('execute', {
+                    functionName: 'updateSelectors',
+                    parameters: JSON.stringify([updates])
+                });
+                
+                showMessage('Selectors saved successfully', 'success');
+                loadConfiguration();
+            } catch (error) {
+                showMessage(`Failed to save selectors: ${error.message}`);
+            }
+        }
+        
+        async function loadLogs() {
+            try {
+                const data = await makeRequest('logs', { limit: 100 });
                 const logArea = document.getElementById('logArea');
-                logArea.classList.remove('hidden');
                 
                 if (data.logs && data.logs.length > 0) {
                     logArea.innerHTML = data.logs.map(log => 
@@ -296,10 +893,33 @@
             }
         }
         
-        // Auto-refresh status every 30 seconds
+        // Placeholder functions for future implementation
+        function viewContent(url, timestamp) {
+            alert(`View content for ${url} at ${timestamp} - Coming soon!`);
+        }
+        
+        function viewDiff(url, timestamp) {
+            alert(`View diff for ${url} at ${timestamp} - Coming soon!`);
+        }
+        
+        function editMonitor(company) {
+            alert(`Edit monitor for ${company} - Coming soon!`);
+        }
+        
+        function removeMonitor(company) {
+            if (confirm(`Remove monitor for ${company}?`)) {
+                alert('Remove functionality coming soon!');
+            }
+        }
+        
+        function addMonitor() {
+            alert('Add monitor functionality coming soon!');
+        }
+        
+        // Auto-refresh status every 60 seconds
         setInterval(() => {
             if (apiToken) checkStatus();
-        }, 30000);
+        }, 60000);
     </script>
 </body>
 </html>
