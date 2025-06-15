@@ -24,6 +24,7 @@ The AI Competitor Intelligence Monitor automatically:
 - **Email Reports**: Beautiful HTML digests delivered daily
 - **Data Storage**: Complete audit trail in Google Sheets
 - **Fully Automated**: Set it and forget it - runs via Google's infrastructure
+- **🧠 TheBrain Integration**: Visual knowledge mapping with automated competitive intelligence
 
 ## 📊 What You'll Monitor
 
@@ -66,11 +67,13 @@ Every morning at 9:15 AM, receive a professional digest including:
 - **Google Sheets**: Data storage and dashboard
 - **Gmail**: Email delivery
 - **HTML/CSS**: Professional email templates
+- **TheBrain API**: Knowledge mapping and visualization
 
 ## 📋 Prerequisites
 
 - Google Account
 - Claude API Key (from Anthropic)
+- TheBrain API Key (optional, for knowledge mapping)
 - 30 minutes for initial setup
 
 ## ⚡ Quick Start
@@ -139,6 +142,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with Google Apps Script
 - Powered by Claude AI (Anthropic)
+- Enhanced with TheBrain visualization
 - Inspired by the need for better competitive intelligence
 
 ## 📞 Support
@@ -151,3 +155,5 @@ For issues and questions:
 ---
 
 Built with ❤️ by [Redmore Studio](https://redmore.studio)
+
+*Last updated: June 15, 2025 - TheBrain integration complete!*
