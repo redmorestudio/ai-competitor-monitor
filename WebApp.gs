@@ -541,19 +541,25 @@ function createJsonResponse(data, statusCode = 200) {
 }
 
 /**
- * Execute arbitrary functions - NOW WITH REAL FUNCTIONS
+ * Execute arbitrary functions - NOW WITH REAL FUNCTIONS + THEBRAIN
  */
 function executeFunction(functionName, parameters) {
   try {
     console.log('Executing function:', functionName, 'with parameters:', parameters);
     
-    // Map of allowed functions - NOW USING REAL IMPLEMENTATIONS
+    // Map of allowed functions - NOW USING REAL IMPLEMENTATIONS + THEBRAIN
     const allowedFunctions = {
       'processIntelligentMonitor': processIntelligentMonitorReal,
       'getExtractedData': getExtractedDataReal,
       'getChangeHistory': getChangeHistoryReal,
       'updateThresholds': updateThresholdsReal,
-      'updateSelectors': updateSelectorsReal
+      'updateSelectors': updateSelectorsReal,
+      'testTheBrainConnection': testTheBrainConnection,
+      'createCompetitiveIntelligenceBrain': createCompetitiveIntelligenceBrain,
+      'addCompaniesToBrain': addCompaniesToBrain,
+      'generateCompetitiveLandscape': generateCompetitiveLandscape,
+      'getTheBrainStatus': getTheBrainStatus,
+      'testTheBrainIntegration': testTheBrainIntegration
     };
     
     if (!allowedFunctions[functionName]) {
@@ -1236,7 +1242,7 @@ function storePageContent(url, extraction) {
 }
 
 /**
- * Store detected change
+ * Store detected change (enhanced with TheBrain integration)
  */
 function storeChange(change) {
   try {
@@ -1255,6 +1261,15 @@ function storeChange(change) {
     ]);
     
     logActivity('Change detected', 'info', change);
+    
+    // Also add to TheBrain if integration is available
+    try {
+      if (typeof addChangeToTheBrain === 'function') {
+        addChangeToTheBrain(change);
+      }
+    } catch (theBrainError) {
+      console.log('TheBrain integration not available:', theBrainError);
+    }
     
   } catch (error) {
     console.error('Error storing change:', error);

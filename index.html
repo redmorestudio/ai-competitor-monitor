@@ -355,6 +355,7 @@
             <button class="tab" onclick="switchTab('extracted')">Extracted Data</button>
             <button class="tab" onclick="switchTab('changes')">Change History</button>
             <button class="tab" onclick="switchTab('config')">Configuration</button>
+            <button class="tab" onclick="switchTab('brain')">🧠 TheBrain</button>
             <button class="tab" onclick="switchTab('logs')">System Logs</button>
         </div>
         
@@ -365,6 +366,7 @@
                 <button onclick="generateBaseline()">📊 Generate Baseline</button>
                 <button onclick="runMonitorCheck()">🔍 Run Monitor Check</button>
                 <button onclick="runIntelligentMonitor()">🧠 Run AI Analysis</button>
+                <button onclick="testTheBrain()">🧠 Test TheBrain</button>
             </div>
             
             <h2>System Status</h2>
@@ -518,6 +520,55 @@
             </div>
         </div>
         
+        <!-- TheBrain Tab -->
+        <div id="brain-tab" class="tab-content">
+            <h2>🧠 TheBrain Knowledge Mapping</h2>
+            <p>Visualize competitive intelligence as dynamic knowledge maps</p>
+            
+            <!-- TheBrain Status -->
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-value" id="brainStatus">checking...</div>
+                    <div class="status-label">BRAIN STATUS</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="brainThoughts">0</div>
+                    <div class="status-label">THOUGHTS</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="brainConnections">0</div>
+                    <div class="status-label">CONNECTIONS</div>
+                </div>
+            </div>
+            
+            <!-- TheBrain Controls -->
+            <div class="config-section">
+                <h3>Brain Management</h3>
+                <div class="controls">
+                    <button onclick="testTheBrainConnection()">🔗 Test Connection</button>
+                    <button onclick="createCompetitiveBrain()">🧠 Create Intelligence Brain</button>
+                    <button onclick="addCompaniesToBrain()">🏢 Add Companies</button>
+                    <button onclick="generateLandscapeAnalysis()">📊 Generate Analysis</button>
+                </div>
+            </div>
+            
+            <!-- Integration Status -->
+            <div class="config-section">
+                <h3>Integration Status</h3>
+                <div id="brainIntegrationStatus">
+                    <p>Loading TheBrain integration status...</p>
+                </div>
+            </div>
+            
+            <!-- Recent Brain Activity -->
+            <div class="config-section">
+                <h3>Recent Brain Activity</h3>
+                <div id="brainActivity">
+                    <p>No brain activity to display yet.</p>
+                </div>
+            </div>
+        </div>
+        
         <!-- System Logs Tab -->
         <div id="logs-tab" class="tab-content">
             <h2>System Logs</h2>
@@ -556,6 +607,8 @@
             // Load tab-specific data
             if (tabName === 'config' && currentConfig === null) {
                 loadConfiguration();
+            } else if (tabName === 'brain') {
+                loadTheBrainStatus();
             }
         }
         
@@ -893,7 +946,137 @@
             }
         }
         
-        // Placeholder functions for future implementation
+        // ============ THEBRAIN FUNCTIONS ============
+        
+        async function testTheBrain() {
+            try {
+                showMessage('Testing TheBrain integration...', 'info');
+                const data = await makeRequest('execute', {
+                    functionName: 'testTheBrainIntegration',
+                    parameters: '[]'
+                });
+                
+                if (data.success && data.result.success) {
+                    showMessage(`🧠 TheBrain integration test successful! Brain ID: ${data.result.brainId}`, 'success');
+                    loadTheBrainStatus();
+                } else {
+                    showMessage(`🧠 TheBrain test failed: ${data.result.error || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`TheBrain test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testTheBrainConnection() {
+            try {
+                showMessage('Testing TheBrain connection...', 'info');
+                const data = await makeRequest('execute', {
+                    functionName: 'testTheBrainConnection',
+                    parameters: '[]'
+                });
+                
+                if (data.success && data.result.success) {
+                    showMessage('🔗 TheBrain connection successful!', 'success');
+                    document.getElementById('brainStatus').textContent = 'Connected';
+                } else {
+                    showMessage(`Connection failed: ${data.result.error}`, 'error');
+                    document.getElementById('brainStatus').textContent = 'Disconnected';
+                }
+            } catch (error) {
+                showMessage(`Connection test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function createCompetitiveBrain() {
+            try {
+                showMessage('Creating competitive intelligence brain...', 'info');
+                const data = await makeRequest('execute', {
+                    functionName: 'createCompetitiveIntelligenceBrain',
+                    parameters: '[]'
+                });
+                
+                if (data.success && data.result.success) {
+                    showMessage(`🧠 Competitive intelligence brain created successfully!`, 'success');
+                    loadTheBrainStatus();
+                } else {
+                    showMessage(`Brain creation failed: ${data.result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Brain creation failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function addCompaniesToBrain() {
+            try {
+                showMessage('Adding companies to brain...', 'info');
+                const data = await makeRequest('execute', {
+                    functionName: 'addCompaniesToBrain',
+                    parameters: '[]'
+                });
+                
+                if (data.success && data.result.success) {
+                    showMessage(`🏢 ${data.result.companiesAdded} companies added to brain!`, 'success');
+                    loadTheBrainStatus();
+                } else {
+                    showMessage(`Adding companies failed: ${data.result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Adding companies failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function generateLandscapeAnalysis() {
+            try {
+                showMessage('Generating competitive landscape analysis...', 'info');
+                const data = await makeRequest('execute', {
+                    functionName: 'generateCompetitiveLandscape',
+                    parameters: '[]'
+                });
+                
+                if (data.success && data.result.success) {
+                    showMessage(`📊 Competitive landscape analysis generated! Companies analyzed: ${data.result.companiesAnalyzed}`, 'success');
+                    loadTheBrainStatus();
+                } else {
+                    showMessage(`Analysis generation failed: ${data.result.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Analysis generation failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function loadTheBrainStatus() {
+            try {
+                const data = await makeRequest('execute', {
+                    functionName: 'getTheBrainStatus',
+                    parameters: '[]'
+                });
+                
+                if (data.success && data.result) {
+                    const status = data.result;
+                    
+                    // Update status display
+                    document.getElementById('brainStatus').textContent = status.enabled ? 'Enabled' : 'Disabled';
+                    
+                    // Update integration status
+                    const statusDiv = document.getElementById('brainIntegrationStatus');
+                    statusDiv.innerHTML = `
+                        <div class="config-item">
+                            <h4>Integration Status</h4>
+                            <p><strong>Enabled:</strong> ${status.enabled ? '✅ Yes' : '❌ No'}</p>
+                            <p><strong>API Key:</strong> ${status.apiKey === 'configured' ? '✅ Configured' : '❌ Missing'}</p>
+                            <p><strong>Brain ID:</strong> ${status.brainId || 'Not created'}</p>
+                            <p><strong>Brain Name:</strong> ${status.brainName}</p>
+                            <p><strong>Categories:</strong> ${status.categories}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load TheBrain status:', error);
+            }
+        }
+        
+        // ============ PLACEHOLDER FUNCTIONS ============
+        
         function viewContent(url, timestamp) {
             alert(`View content for ${url} at ${timestamp} - Coming soon!`);
         }
