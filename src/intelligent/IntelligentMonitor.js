@@ -4,32 +4,7 @@
  */
 
 // ============ CONFIGURATION ============
-const INTELLIGENT_CONFIG = {
-  maxContentLength: 50000,
-  relevanceThreshold: 6,
-  crawlDelay: 2000,
-  retryAttempts: 3,
-  
-  keywords: {
-    high: ['price', 'pricing', 'launch', 'new', 'release', 'announce', 'available', 'introducing'],
-    medium: ['feature', 'update', 'improve', 'enhance', 'api', 'model', 'performance', 'capability'],
-    low: ['fix', 'patch', 'minor', 'small', 'tweak', 'adjust']
-  },
-  
-  pageWeights: {
-    'homepage': 0.8,
-    'index': 0.8,
-    'home': 0.8,
-    'news': 1.2,
-    'blog': 1.2,
-    'updates': 1.2,
-    'technology': 1.5,
-    'features': 1.5,
-    'products': 1.5,
-    'pricing': 2.0,
-    'announcement': 2.0
-  }
-};
+// Using INTELLIGENT_CONFIG from WebApp.gs
 
 // ============ LLM CONFIGURATION ============
 const LLM_CONFIG = {

@@ -11,43 +11,7 @@
  */
 
 // Configuration for intelligent monitoring
-const MONITOR_CONFIG = {
-  // Configurable thresholds
-  thresholds: {
-    global: 25, // Default 25% change threshold
-    company: {
-      "Anthropic": 15,     // More sensitive for Anthropic
-      "OpenAI": 30,        // Less sensitive for OpenAI
-      "Google DeepMind": 20,
-      "Mistral AI": 25
-    },
-    page: {
-      // Specific page overrides (supports wildcards)
-      "*/pricing*": 10,    // Very sensitive for pricing pages
-      "*/blog/*": 50,      // Less sensitive for blog posts
-      "*/api/*": 15,       // Sensitive for API documentation
-      "*/about/*": 40      // Less sensitive for about pages
-    }
-  },
-  
-  // AI relevance thresholds
-  aiThresholds: {
-    alertThreshold: 6,     // Alert on AI score >= 6
-    noiseThreshold: 3,     // Ignore changes with AI score < 3
-    criticalKeywords: ["price", "launch", "deprecat", "shutdown", "acquired"]
-  },
-  
-  // Content extraction selectors
-  contentSelectors: {
-    default: "main, article, .content, #content, [role='main']",
-    exclude: "nav, header, footer, .sidebar, .ads, script, style",
-    specific: {
-      "anthropic.com": "main.relative",
-      "openai.com": "main.main-content",
-      "mistral.ai": ".prose"
-    }
-  }
-};
+// Using MONITOR_CONFIG from WebApp.gs
 
 /**
  * Get the appropriate change threshold for a URL
