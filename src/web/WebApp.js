@@ -144,7 +144,7 @@ function getSystemStatusFixed() {
       lastRun: lastRun || 'Never',
       companies: config.length,
       urls: totalUrls,
-      version: 47, // Updated version
+      version: 51, // Updated version
       timestamp: new Date().toISOString()
     };
   } catch (error) {
@@ -654,6 +654,6 @@ function testFixedWebApp() {
   return {
     success: true,
     message: 'Fixed WebApp tested successfully',
-    version: 47
+    version: 51
   };
 }

@@ -239,7 +239,7 @@ function getSystemStatusFixed() {
       lastRun: {
         monitor: lastRun || 'never'
       },
-      version: 48,
+      version: 51,
       timestamp: new Date().toISOString()
     };
   } catch (error) {
