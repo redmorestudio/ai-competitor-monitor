@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Monitor Backend Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #output {
+            background: #f0f0f0;
+            padding: 20px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Competitor Monitor - Backend Test</h1>
+    <p>This is a simple test page to verify the backend is working.</p>
+    
+    <button onclick="testStatus()">Test Status</button>
+    <button onclick="testBaseline()">Test Baseline Generation</button>
+    <button onclick="testConfig()">Test Configuration</button>
+    
+    <div id="output">Output will appear here...</div>
+    
+    <script>
+        const API_BASE = 'https://script.google.com/macros/s/AKfycbxhGoXjrSDfthEEtQ2nelZF6rslagWQEQjHE4fbalP-pBwdog8Hnd4249CHkVhAoeIphg/exec';
+        const token = 'dev-token-change-me';
+        
+        function log(message) {
+            const output = document.getElementById('output');
+            output.textContent += new Date().toISOString() + ' - ' + message + '\n';
+        }
+        
+        async function testStatus() {
+            log('Testing status endpoint...');
+            try {
+                const response = await fetch(API_BASE + '?token=' + token + '&action=status');
+                const data = await response.json();
+                log('Status response: ' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+        
+        async function testBaseline() {
+            log('Testing baseline generation...');
+            log('This may take a few minutes...');
+            try {
+                const response = await fetch(API_BASE + '?token=' + token + '&action=baseline');
+                const data = await response.json();
+                log('Baseline response: ' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+        
+        async function testConfig() {
+            log('Testing configuration endpoint...');
+            try {
+                const response = await fetch(API_BASE + '?token=' + token + '&action=config');
+                const data = await response.json();
+                log('Config response: ' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

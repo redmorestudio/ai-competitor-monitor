@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Both Projects</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .project {
+            border: 2px solid #ccc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .project h2 {
+            margin-top: 0;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+        }
+        .output {
+            background: #f0f0f0;
+            padding: 10px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .resilient {
+            border-color: #4CAF50;
+        }
+        .ai-monitor {
+            border-color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Both Google Apps Script Projects</h1>
+    
+    <div class="project resilient">
+        <h2>🟢 "Resilient" Project</h2>
+        <p>Script ID: 1i4qaE4iLJRAjcoirYxKjOmHf27U-kXjHBZBEJw_LxFgaJiwWf1REvSxH</p>
+        <p>Latest deployment: v41 (June 15, 2025)</p>
+        <button onclick="testResilentStatus()">Test Status</button>
+        <button onclick="testResilentBaseline()">Test Baseline</button>
+        <button onclick="testResilentConfig()">Test Config</button>
+        <div id="resilient-output" class="output">Output will appear here...</div>
+    </div>
+    
+    <div class="project ai-monitor">
+        <h2>🔵 "AI Competitor Monitor" Project</h2>
+        <p>Script ID: 12l6cAE0m_NMRCze5T0sZTvNuPPC0RfwAKf1k7VIlF3jdcywonZNe_oMK</p>
+        <p>Latest deployment: v46 (June 16, 2025)</p>
+        <button onclick="testAIMonitorStatus()">Test Status</button>
+        <button onclick="testAIMonitorBaseline()">Test Baseline</button>
+        <button onclick="testAIMonitorConfig()">Test Config</button>
+        <div id="ai-monitor-output" class="output">Output will appear here...</div>
+    </div>
+    
+    <script>
+        // Deployment URLs
+        const RESILIENT_URL = 'https://script.google.com/macros/s/AKfycbyBo6e90RytqbgBZWvs9eqNS6iAL45cQ7B8adG1ofNLdWV_hqTDBVME4DdSe5d_qypW/exec';
+        const AI_MONITOR_URL = 'https://script.google.com/macros/s/AKfycbxhGoXjrSDfthEEtQ2nelZF6rslagWQEQjHE4fbalP-pBwdog8Hnd4249CHkVhAoeIphg/exec';
+        const TOKEN = 'dev-token-change-me';
+        
+        function log(project, message) {
+            const output = document.getElementById(project + '-output');
+            output.textContent += new Date().toISOString() + ' - ' + message + '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        async function testAPI(project, url, action) {
+            const projectName = project === 'resilient' ? 'Resilient' : 'AI Monitor';
+            log(project, `Testing ${action} on ${projectName}...`);
+            
+            try {
+                const response = await fetch(url + '?token=' + TOKEN + '&action=' + action);
+                const data = await response.json();
+                log(project, 'Response: ' + JSON.stringify(data, null, 2));
+                
+                // Special check for baseline to see if it actually works
+                if (action === 'baseline' && data.results) {
+                    const successCount = data.results.filter(r => r.urls && r.urls.length > 0).length;
+                    const errorCount = data.results.filter(r => r.errors && r.errors.length > 0).length;
+                    log(project, `\nSummary: ${successCount} successful, ${errorCount} with errors`);
+                }
+            } catch (error) {
+                log(project, 'ERROR: ' + error.message);
+            }
+        }
+        
+        // Resilient tests
+        function testResilentStatus() {
+            testAPI('resilient', RESILIENT_URL, 'status');
+        }
+        
+        function testResilentBaseline() {
+            testAPI('resilient', RESILIENT_URL, 'baseline');
+        }
+        
+        function testResilentConfig() {
+            testAPI('resilient', RESILIENT_URL, 'config');
+        }
+        
+        // AI Monitor tests
+        function testAIMonitorStatus() {
+            testAPI('ai-monitor', AI_MONITOR_URL, 'status');
+        }
+        
+        function testAIMonitorBaseline() {
+            testAPI('ai-monitor', AI_MONITOR_URL, 'baseline');
+        }
+        
+        function testAIMonitorConfig() {
+            testAPI('ai-monitor', AI_MONITOR_URL, 'config');
+        }
+    </script>
+</body>
+</html>

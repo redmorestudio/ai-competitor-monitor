@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Permission Test</title>
+</head>
+<body>
+    <h1>Testing Google Apps Script Permissions</h1>
+    <pre id="output"></pre>
+    
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxhGoXjrSDfthEEtQ2nelZF6rslagWQEQjHE4fbalP-pBwdog8Hnd4249CHkVhAoeIphg/exec';
+        const TOKEN = 'dev-token-change-me';
+        
+        const output = document.getElementById('output');
+        
+        async function log(msg) {
+            output.textContent += msg + '\n';
+        }
+        
+        async function test() {
+            log('Starting permission test...\n');
+            
+            // Test 1: Status endpoint
+            try {
+                log('Test 1: Checking status endpoint...');
+                const statusUrl = `${API_URL}?token=${TOKEN}&action=status`;
+                const statusResp = await fetch(statusUrl);
+                const statusData = await statusResp.text();
+                log('Status response: ' + statusData);
+            } catch (e) {
+                log('Status error: ' + e.message);
+            }
+            
+            // Test 2: Execute baseline function
+            try {
+                log('\nTest 2: Testing baseline generation...');
+                const baselineUrl = `${API_URL}?token=${TOKEN}&action=baseline`;
+                const baselineResp = await fetch(baselineUrl);
+                const baselineData = await baselineResp.text();
+                log('Baseline response: ' + baselineData);
+            } catch (e) {
+                log('Baseline error: ' + e.message);
+            }
+            
+            // Test 3: Check for spreadsheet
+            try {
+                log('\nTest 3: Checking spreadsheet access...');
+                const execUrl = `${API_URL}?token=${TOKEN}&action=execute&functionName=getSpreadsheetInfo&parameters=[]`;
+                const execResp = await fetch(execUrl);
+                const execData = await execResp.text();
+                log('Spreadsheet info: ' + execData);
+            } catch (e) {
+                log('Spreadsheet error: ' + e.message);
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>
