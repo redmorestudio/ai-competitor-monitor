@@ -402,12 +402,11 @@
     </div>
     
     <script>
-        // UPDATED API endpoint to v55 deployment - ENHANCED CORS FIXED
-        const API_BASE = 'https://script.google.com/macros/s/AKfycbyaqXm2sWbSojuG_B8lJYtj9oA1fOmlred33qGLxAeYnVAvI7P-L5E0GeYK5hmNzhn0/exec';
-        let apiToken = '';
+        // CRITICAL MERGE v57: Complete functionality + CORS fixes - FINAL VERSION
+        const API_BASE = 'https://script.google.com/macros/s/AKfycbyaqXm2sWbSojuG_B8lJYtj9oA1fOmlred33qGLxAeYnVAvI7P-L5E0GeYK5hmNzhn0/exec';        let apiToken = '';
         let currentConfig = null;
         let currentMonitors = [];
-        let isLoading = false; // Prevent infinite loops
+        let isLoading = false;
         
         // Enhanced logging
         const log = (message, data = null) => {
@@ -415,12 +414,15 @@
             console.log(`[${timestamp}] ${message}`, data || '');
         };
         
-        // Initialize with clean token
+        // Initialize with clean token - FIXED: Only run once
         function initializeApp() {
+            if (document.readyState !== 'complete') {
+                return; // Wait for page to fully load
+            }
+            
             const storedToken = localStorage.getItem('apiToken') || '';
             
             if (storedToken && storedToken.trim()) {
-                // Clean the token - remove duplicates and Bearer prefix
                 apiToken = storedToken.replace(/^Bearer/i, '').trim();
                 if (apiToken.includes('dev-token-change-me')) {
                     apiToken = 'dev-token-change-me';
@@ -429,16 +431,27 @@
                 document.getElementById('apiToken').value = apiToken;
                 log('Loaded token from storage');
                 
-                // Auto-check status on load
-                setTimeout(() => checkStatus(), 1000);
+                // Auto-check status on load - delayed to prevent stack overflow
+                setTimeout(() => {
+                    if (!isLoading) {
+                        checkStatus();
+                    }
+                }, 2000);
             }
         }
         
-        // Call initialization once
-        document.addEventListener('DOMContentLoaded', initializeApp);
+        // FIXED: Only add event listener once
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
         
         // Tab switching
         function switchTab(tabName) {
+            // Prevent recursive calls
+            if (isLoading) return;
+            
             // Hide all tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -451,24 +464,33 @@
             document.getElementById(`${tabName}-tab`).classList.add('active');
             event.target.classList.add('active');
             
-            // Load tab-specific data
-            if (tabName === 'config' && currentConfig === null) {
-                loadConfiguration();
-            } else if (tabName === 'extracted') {
-                loadExtractedData();
-            } else if (tabName === 'changes') {
-                loadChangeHistory();
-            } else if (tabName === 'logs') {
-                loadLogs();
-            }
+            // Load tab-specific data - THROTTLED to prevent infinite loops
+            setTimeout(() => {
+                if (!isLoading) {
+                    if (tabName === 'config' && currentConfig === null) {
+                        loadConfiguration();
+                    } else if (tabName === 'extracted') {
+                        loadExtractedData();
+                    } else if (tabName === 'changes') {
+                        loadChangeHistory();
+                    } else if (tabName === 'logs') {
+                        loadLogs();
+                    }
+                }
+            }, 500);
         }
         
+        // FIXED: Prevent multiple simultaneous saves
         function saveToken() {
-            if (isLoading) return; // Prevent multiple saves
+            if (isLoading) {
+                log('Save token blocked - already loading');
+                return;
+            }
             
             const btn = document.getElementById('saveTokenBtn');
             btn.disabled = true;
             btn.textContent = 'Saving...';
+            isLoading = true;
             
             try {
                 const newToken = document.getElementById('apiToken').value.trim();
@@ -481,24 +503,23 @@
                 apiToken = newToken;
                 localStorage.setItem('apiToken', apiToken);
                 
-                // Verify storage
-                const verified = localStorage.getItem('apiToken');
-                if (verified === apiToken) {
-                    showMessage('Token saved successfully', 'success');
-                    log('Token saved and verified');
-                    
-                    // Check status once after saving
-                    setTimeout(() => checkStatus(), 500);
-                } else {
-                    showMessage('Token save verification failed!', 'error');
-                    log('Token verification failed');
-                }
+                showMessage('Token saved successfully', 'success');
+                log('Token saved successfully');
+                
+                // Test the token after a delay
+                setTimeout(() => {
+                    if (!isLoading) {
+                        checkStatus();
+                    }
+                }, 1000);
+                
             } catch (error) {
                 log('Error saving token', { error: error.message });
                 showMessage('Error saving token: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Save Token';
+                isLoading = false;
             }
         }
         
@@ -510,11 +531,11 @@
             }
         }
         
-        // FIXED: Proper API request function
+        // FIXED: Simple request to avoid OPTIONS preflight
         async function makeRequest(action, params = {}) {
             if (isLoading && action !== 'status') {
                 log('Request blocked - already loading');
-                return null;
+                throw new Error('Another operation is in progress');
             }
             
             try {
@@ -530,14 +551,19 @@
                     }
                 });
                 
-                log(`API Request: ${action}`, { params });
+                log(`API Request: ${action}`, { url: url.toString().substring(0, 100) + '...' });
                 
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                
+                // CRITICAL: Simple request to avoid OPTIONS preflight
                 const response = await fetch(url.toString(), {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
+                    // NO custom headers - this prevents preflight!
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -549,8 +575,11 @@
                 try {
                     data = JSON.parse(responseText);
                 } catch (parseError) {
-                    log('Failed to parse response', { responseText: responseText.substring(0, 200) });
-                    throw new Error('Invalid response format');
+                    log('Failed to parse response', { 
+                        responseText: responseText.substring(0, 200),
+                        error: parseError.message 
+                    });
+                    throw new Error('Invalid response format from server');
                 }
                 
                 log(`API Response: ${action}`, { success: data.success });
@@ -561,16 +590,31 @@
                 
                 return data;
             } catch (error) {
-                log('Request failed', { action, error: error.message });
-                showMessage(`Error: ${error.message}`, 'error');
-                throw error;
+                if (error.name === 'AbortError') {
+                    log('Request timeout', { action });
+                    throw new Error('Request timed out - please try again');
+                } else {
+                    log('Request failed', { action, error: error.message });
+                    throw error;
+                }
             } finally {
-                isLoading = false;
+                // Always clear loading flag after a delay to prevent rapid-fire requests
+                setTimeout(() => {
+                    isLoading = false;
+                }, 1000);
             }
         }
         
-        // FIXED: Status check function
+        // FIXED: Throttled status check
+        let lastStatusCheck = 0;
         async function checkStatus() {
+            const now = Date.now();
+            if (now - lastStatusCheck < 3000) { // Throttle to max once per 3 seconds
+                log('Status check throttled');
+                return;
+            }
+            lastStatusCheck = now;
+            
             const btn = document.getElementById('statusBtn');
             if (btn) {
                 btn.disabled = true;
@@ -593,20 +637,30 @@
                     
                     if (data.lastCheck && data.lastCheck !== 'never' && data.lastCheck !== 'Never') {
                         const date = new Date(data.lastCheck);
-                        document.getElementById('lastCheck').textContent = date.toLocaleString();
+                        document.getElementById('lastCheck').textContent = isNaN(date.getTime()) ? 'Never' : date.toLocaleString();
                     } else {
                         document.getElementById('lastCheck').textContent = 'Never';
                     }
                     
-                    // Load configuration and recent changes
-                    await loadConfiguration();
-                    await loadRecentChanges();
-                    
                     log('Status updated successfully');
+                    showMessage('Status updated successfully', 'success');
+                    
+                    // Load configuration and recent changes only if not already loading
+                    setTimeout(() => {
+                        if (!isLoading) {
+                            loadConfiguration();
+                            setTimeout(() => {
+                                if (!isLoading) {
+                                    loadRecentChanges();
+                                }
+                            }, 1000);
+                        }
+                    }, 500);
                 }
             } catch (error) {
                 log('Status check failed', { error: error.message });
                 document.getElementById('systemStatus').textContent = 'error';
+                showMessage(`Status check failed: ${error.message}`, 'error');
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -615,15 +669,21 @@
             }
         }
         
-        // FIXED: Load configuration
+        // FIXED: Throttled configuration loading
+        let lastConfigLoad = 0;
         async function loadConfiguration() {
+            const now = Date.now();
+            if (now - lastConfigLoad < 5000) { // Throttle to max once per 5 seconds
+                return;
+            }
+            lastConfigLoad = now;
+            
             try {
                 const data = await makeRequest('config');
                 if (data) {
                     currentConfig = data.config;
                     currentMonitors = data.monitors || [];
                     
-                    // Update UI
                     updateConfigUI();
                     updateUrlFilter();
                     
@@ -662,7 +722,7 @@
             });
         }
         
-        // FIXED: Generate baseline
+        // FIXED: Generate baseline with better error handling
         async function generateBaseline() {
             const btn = document.getElementById('baselineBtn');
             btn.disabled = true;
@@ -688,7 +748,7 @@
                         console.warn('Baseline errors:', data.errors);
                     }
                     
-                    checkStatus();
+                    setTimeout(() => checkStatus(), 2000);
                 }
             } catch (error) {
                 log('Baseline generation failed', { error: error.message });
@@ -711,8 +771,10 @@
                 
                 if (data) {
                     showMessage(`Monitor check completed: ${data.changes ? data.changes.length : 0} changes detected`, 'success');
-                    checkStatus();
-                    loadRecentChanges();
+                    setTimeout(() => {
+                        checkStatus();
+                        loadRecentChanges();
+                    }, 1000);
                 }
             } catch (error) {
                 showMessage(`Monitor check failed: ${error.message}`, 'error');
@@ -722,7 +784,7 @@
             }
         }
         
-        // FIXED: Load extracted data (now loads URLs)
+        // FIXED: Load extracted data
         async function loadExtractedData() {
             const btn = document.getElementById('refreshDataBtn');
             btn.disabled = true;
@@ -851,9 +913,14 @@
             window.open(url, '_blank');
         }
         
-        // Auto-refresh status every 60 seconds (but not during active operations)
+        // REMOVED: Auto-refresh to prevent conflicts
+        // Instead, manual refresh every 60 seconds only if user is not actively using the system
+        let lastUserActivity = Date.now();
+        document.addEventListener('click', () => { lastUserActivity = Date.now(); });
+        
         setInterval(() => {
-            if (apiToken && !isLoading) {
+            if (apiToken && !isLoading && (Date.now() - lastUserActivity > 30000)) {
+                // Only auto-refresh if user hasn't been active for 30 seconds
                 checkStatus();
             }
         }, 60000);

@@ -1,2 +1,28 @@
-# This file has been removed to use traditional GitHub Pages deployment
-# GitHub Pages will automatically deploy from main branch
+name: Deploy to Google Apps Script
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install clasp
+      run: npm install -g @google/clasp
+      
+    - name: Deploy to Google Apps Script
+      run: |
+        echo "Deployment configured for manual clasp deployment"
+        echo "Auto-deployment disabled - use manual clasp push for backend updates"
+        echo "Frontend automatically deployed via GitHub Pages"
