@@ -402,7 +402,7 @@
     </div>
     
     <script>
-        // ✅ CORS FIX v58: Enhanced with OPTIONS preflight handling
+        // ✅ CORS FIX v59: Remove custom headers to avoid OPTIONS preflight
         const API_BASE = 'https://script.google.com/macros/s/AKfycbwvNww-yEGVOMZqnf_WTP3Vul8dccBgA3su3j5-GDCIxT_hMYi9TWfjek5fgk1uFrIb4Q/exec';
         let apiToken = '';
         let currentConfig = null;
@@ -532,7 +532,7 @@
             }
         }
         
-        // FIXED: More robust API request function with better error handling
+        // FIXED: Simple request to avoid OPTIONS preflight
         async function makeRequest(action, params = {}) {
             if (isLoading && action !== 'status') {
                 log('Request blocked - already loading');
@@ -557,11 +557,10 @@
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
                 
+                // CRITICAL: Simple request to avoid OPTIONS preflight
                 const response = await fetch(url.toString(), {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    // NO custom headers - this prevents preflight!
                     signal: controller.signal
                 });
                 
