@@ -106,6 +106,10 @@
         button:hover {
             background: #2a9fd8;
         }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
         
         /* Controls */
         .controls {
@@ -194,79 +198,6 @@
             background: #1a1a2e;
         }
         
-        /* Change Viewer */
-        .change-viewer {
-            background: #16213e;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border: 1px solid #0f4c75;
-        }
-        .diff-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-        }
-        .diff-side {
-            background: #1a1a2e;
-            padding: 15px;
-            border-radius: 4px;
-            border: 1px solid #0f4c75;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .diff-added {
-            background: rgba(39, 174, 96, 0.2);
-            color: #2ecc71;
-        }
-        .diff-removed {
-            background: rgba(192, 57, 43, 0.2);
-            color: #e74c3c;
-        }
-        
-        /* Threshold Indicators */
-        .threshold-indicator {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 0.85em;
-            margin-left: 10px;
-        }
-        .threshold-low {
-            background: #27ae60;
-            color: white;
-        }
-        .threshold-medium {
-            background: #f39c12;
-            color: white;
-        }
-        .threshold-high {
-            background: #e74c3c;
-            color: white;
-        }
-        
-        /* AI Score */
-        .ai-score {
-            display: inline-block;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 30px;
-            font-weight: bold;
-            color: white;
-        }
-        .ai-score-low {
-            background: #95a5a6;
-        }
-        .ai-score-medium {
-            background: #f39c12;
-        }
-        .ai-score-high {
-            background: #e74c3c;
-        }
-        
         /* Messages */
         .error {
             background: #c0392b;
@@ -345,7 +276,7 @@
             <p>Enter your API token to access the monitoring system:</p>
             <div class="flex">
                 <input type="password" id="apiToken" placeholder="Enter API token" style="width: 300px;">
-                <button onclick="saveToken()">Save Token</button>
+                <button onclick="saveToken()" id="saveTokenBtn">Save Token</button>
             </div>
         </div>
         
@@ -355,18 +286,15 @@
             <button class="tab" onclick="switchTab('extracted')">Extracted Data</button>
             <button class="tab" onclick="switchTab('changes')">Change History</button>
             <button class="tab" onclick="switchTab('config')">Configuration</button>
-            <button class="tab" onclick="switchTab('brain')">🧠 TheBrain</button>
             <button class="tab" onclick="switchTab('logs')">System Logs</button>
         </div>
         
         <!-- Dashboard Tab -->
         <div id="dashboard-tab" class="tab-content active">
             <div class="controls">
-                <button onclick="checkStatus()">🔄 Refresh Status</button>
-                <button onclick="generateBaseline()">📊 Generate Baseline</button>
-                <button onclick="runMonitorCheck()">🔍 Run Monitor Check</button>
-                <button onclick="runIntelligentMonitor()">🧠 Run AI Analysis</button>
-                <button onclick="testTheBrain()">🧠 Test TheBrain</button>
+                <button onclick="checkStatus()" id="statusBtn">🔄 Refresh Status</button>
+                <button onclick="generateBaseline()" id="baselineBtn">📊 Generate Baseline</button>
+                <button onclick="runMonitorCheck()" id="monitorBtn">🔍 Run Monitor Check</button>
             </div>
             
             <h2>System Status</h2>
@@ -392,33 +320,32 @@
             <div id="messageArea"></div>
             
             <!-- Recent Changes Summary -->
-            <div class="change-viewer">
+            <div class="config-section">
                 <h3>Recent Significant Changes</h3>
                 <div id="recentChanges">
-                    <p style="color: #888;">No recent changes detected.</p>
+                    <p style="color: #888;">Click "Refresh Status" to load recent changes.</p>
                 </div>
             </div>
         </div>
         
         <!-- Extracted Data Tab -->
         <div id="extracted-tab" class="tab-content">
-            <h2>Extracted Content</h2>
-            <button onclick="loadExtractedData()" class="mb-10">🔄 Refresh Data</button>
+            <h2>Monitored URLs</h2>
+            <button onclick="loadExtractedData()" class="mb-10" id="refreshDataBtn">🔄 Refresh Data</button>
             
             <div class="data-table">
                 <table>
                     <thead>
                         <tr>
-                            <th>Timestamp</th>
+                            <th>Company</th>
                             <th>URL</th>
-                            <th>Title</th>
-                            <th>Word Count</th>
-                            <th>Preview</th>
+                            <th>Type</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="extractedDataTable">
-                        <tr><td colspan="6" style="text-align: center; color: #888;">Click refresh to load data</td></tr>
+                        <tr><td colspan="5" style="text-align: center; color: #888;">Click refresh to load data</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -431,7 +358,7 @@
                 <select id="changeUrlFilter" style="width: 300px;">
                     <option value="">All URLs</option>
                 </select>
-                <button onclick="loadChangeHistory()">🔄 Load Changes</button>
+                <button onclick="loadChangeHistory()" id="loadChangesBtn">🔄 Load Changes</button>
             </div>
             
             <div class="data-table">
@@ -441,130 +368,27 @@
                             <th>Timestamp</th>
                             <th>Company</th>
                             <th>URL</th>
-                            <th>Change %</th>
-                            <th>AI Score</th>
+                            <th>Type</th>
                             <th>Summary</th>
-                            <th>Actions</th>
+                            <th>Relevance</th>
                         </tr>
                     </thead>
                     <tbody id="changeHistoryTable">
-                        <tr><td colspan="7" style="text-align: center; color: #888;">Select URL and load changes</td></tr>
+                        <tr><td colspan="6" style="text-align: center; color: #888;">Select URL and load changes</td></tr>
                     </tbody>
                 </table>
-            </div>
-            
-            <!-- Diff Viewer -->
-            <div class="change-viewer hidden" id="diffViewer">
-                <h3>Change Comparison</h3>
-                <div class="diff-container">
-                    <div class="diff-side">
-                        <h4>Previous Version</h4>
-                        <div id="diffBefore"></div>
-                    </div>
-                    <div class="diff-side">
-                        <h4>Current Version</h4>
-                        <div id="diffAfter"></div>
-                    </div>
-                </div>
             </div>
         </div>
         
         <!-- Configuration Tab -->
         <div id="config-tab" class="tab-content">
-            <h2>Configuration Management</h2>
-            
-            <!-- Threshold Configuration -->
-            <div class="config-section">
-                <h3>Change Detection Thresholds</h3>
-                <div class="config-grid">
-                    <div class="config-item">
-                        <h4>Global Threshold</h4>
-                        <input type="number" id="globalThreshold" min="1" max="100" value="25">
-                        <label>% change to trigger alert</label>
-                    </div>
-                    <div class="config-item">
-                        <h4>AI Alert Threshold</h4>
-                        <input type="number" id="aiThreshold" min="1" max="10" value="6">
-                        <label>Minimum AI score (1-10)</label>
-                    </div>
-                </div>
-                
-                <h4>Company-Specific Thresholds</h4>
-                <div id="companyThresholds" class="config-grid"></div>
-                
-                <h4>Page-Specific Rules</h4>
-                <div id="pageThresholds" class="config-grid"></div>
-                
-                <button onclick="saveThresholds()">💾 Save Thresholds</button>
-            </div>
+            <h2>Configuration</h2>
             
             <!-- Monitor Configuration -->
             <div class="config-section">
                 <h3>Monitored Companies</h3>
-                <div id="monitorList"></div>
-                <button onclick="addMonitor()">➕ Add Company</button>
-            </div>
-            
-            <!-- CSS Selectors -->
-            <div class="config-section">
-                <h3>Content Extraction Selectors</h3>
-                <div class="config-item">
-                    <h4>Default Content Selector</h4>
-                    <input type="text" id="defaultSelector" value="main, article, .content, #content">
-                </div>
-                <div class="config-item">
-                    <h4>Exclude Selector</h4>
-                    <input type="text" id="excludeSelector" value="nav, header, footer, .sidebar, .ads">
-                </div>
-                <button onclick="saveSelectors()">💾 Save Selectors</button>
-            </div>
-        </div>
-        
-        <!-- TheBrain Tab -->
-        <div id="brain-tab" class="tab-content">
-            <h2>🧠 TheBrain Knowledge Mapping</h2>
-            <p>Visualize competitive intelligence as dynamic knowledge maps</p>
-            
-            <!-- TheBrain Status -->
-            <div class="status-grid">
-                <div class="status-card">
-                    <div class="status-value" id="brainStatus">checking...</div>
-                    <div class="status-label">BRAIN STATUS</div>
-                </div>
-                <div class="status-card">
-                    <div class="status-value" id="brainThoughts">0</div>
-                    <div class="status-label">THOUGHTS</div>
-                </div>
-                <div class="status-card">
-                    <div class="status-value" id="brainConnections">0</div>
-                    <div class="status-label">CONNECTIONS</div>
-                </div>
-            </div>
-            
-            <!-- TheBrain Controls -->
-            <div class="config-section">
-                <h3>Brain Management</h3>
-                <div class="controls">
-                    <button onclick="testTheBrainConnection()">🔗 Test Connection</button>
-                    <button onclick="createCompetitiveBrain()">🧠 Create Intelligence Brain</button>
-                    <button onclick="addCompaniesToBrain()">🏢 Add Companies</button>
-                    <button onclick="generateLandscapeAnalysis()">📊 Generate Analysis</button>
-                </div>
-            </div>
-            
-            <!-- Integration Status -->
-            <div class="config-section">
-                <h3>Integration Status</h3>
-                <div id="brainIntegrationStatus">
-                    <p>Loading TheBrain integration status...</p>
-                </div>
-            </div>
-            
-            <!-- Recent Brain Activity -->
-            <div class="config-section">
-                <h3>Recent Brain Activity</h3>
-                <div id="brainActivity">
-                    <p>No brain activity to display yet.</p>
+                <div id="monitorList">
+                    <p>Loading configuration...</p>
                 </div>
             </div>
         </div>
@@ -572,8 +396,8 @@
         <!-- System Logs Tab -->
         <div id="logs-tab" class="tab-content">
             <h2>System Logs</h2>
-            <button onclick="loadLogs()">🔄 Refresh Logs</button>
-            <div class="log-area" id="logArea"></div>
+            <button onclick="loadLogs()" id="logsBtn">🔄 Refresh Logs</button>
+            <div class="log-area" id="logArea">Click refresh to load logs</div>
         </div>
     </div>
     
@@ -583,42 +407,35 @@
         let apiToken = '';
         let currentConfig = null;
         let currentMonitors = [];
+        let isLoading = false; // Prevent infinite loops
         
         // Enhanced logging
         const log = (message, data = null) => {
             const timestamp = new Date().toISOString();
             console.log(`[${timestamp}] ${message}`, data || '');
-            
-            // Also add to visible log if on logs tab
-            const logArea = document.getElementById('logArea');
-            if (logArea && document.getElementById('logs-tab').classList.contains('active')) {
-                logArea.innerHTML = `[${timestamp}] ${message} ${data ? JSON.stringify(data) : ''}\n` + logArea.innerHTML;
-            }
         };
         
         // Initialize with clean token
         function initializeApp() {
-            // Clear any corrupted token
             const storedToken = localStorage.getItem('apiToken') || '';
-            // Clean the token - remove any duplicates and Bearer prefix
-            if (storedToken.includes('dev-token-change-me')) {
-                apiToken = 'dev-token-change-me';
-                localStorage.setItem('apiToken', apiToken);
-                log('Cleaned corrupted token');
-            } else {
-                // Remove Bearer prefix if present
-                apiToken = storedToken.replace(/^Bearer/i, '').trim();
-            }
             
-            if (apiToken) {
+            if (storedToken && storedToken.trim()) {
+                // Clean the token - remove duplicates and Bearer prefix
+                apiToken = storedToken.replace(/^Bearer/i, '').trim();
+                if (apiToken.includes('dev-token-change-me')) {
+                    apiToken = 'dev-token-change-me';
+                }
+                localStorage.setItem('apiToken', apiToken);
                 document.getElementById('apiToken').value = apiToken;
-                log('Loaded token from storage', { token: apiToken.substring(0, 10) + '...' });
-                checkStatus();
+                log('Loaded token from storage');
+                
+                // Auto-check status on load
+                setTimeout(() => checkStatus(), 1000);
             }
         }
         
-        // Call initialization
-        initializeApp();
+        // Call initialization once
+        document.addEventListener('DOMContentLoaded', initializeApp);
         
         // Tab switching
         function switchTab(tabName) {
@@ -637,30 +454,52 @@
             // Load tab-specific data
             if (tabName === 'config' && currentConfig === null) {
                 loadConfiguration();
-            } else if (tabName === 'brain') {
-                loadTheBrainStatus();
+            } else if (tabName === 'extracted') {
+                loadExtractedData();
+            } else if (tabName === 'changes') {
+                loadChangeHistory();
+            } else if (tabName === 'logs') {
+                loadLogs();
             }
         }
         
         function saveToken() {
-            const newToken = document.getElementById('apiToken').value;
-            log('Saving token', { length: newToken.length });
+            if (isLoading) return; // Prevent multiple saves
             
-            // Ensure clean token storage
-            apiToken = newToken;
-            localStorage.setItem('apiToken', apiToken);
+            const btn = document.getElementById('saveTokenBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
             
-            // Verify storage
-            const verified = localStorage.getItem('apiToken');
-            if (verified === apiToken) {
-                showMessage('Token saved successfully', 'success');
-                log('Token verified after save');
-            } else {
-                showMessage('Token save verification failed!', 'error');
-                log('Token verification failed', { expected: apiToken, actual: verified });
+            try {
+                const newToken = document.getElementById('apiToken').value.trim();
+                
+                if (!newToken) {
+                    showMessage('Please enter an API token', 'error');
+                    return;
+                }
+                
+                apiToken = newToken;
+                localStorage.setItem('apiToken', apiToken);
+                
+                // Verify storage
+                const verified = localStorage.getItem('apiToken');
+                if (verified === apiToken) {
+                    showMessage('Token saved successfully', 'success');
+                    log('Token saved and verified');
+                    
+                    // Check status once after saving
+                    setTimeout(() => checkStatus(), 500);
+                } else {
+                    showMessage('Token save verification failed!', 'error');
+                    log('Token verification failed');
+                }
+            } catch (error) {
+                log('Error saving token', { error: error.message });
+                showMessage('Error saving token: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Token';
             }
-            
-            checkStatus();
         }
         
         function showMessage(message, type = 'error') {
@@ -671,29 +510,40 @@
             }
         }
         
+        // FIXED: Proper API request function
         async function makeRequest(action, params = {}) {
+            if (isLoading && action !== 'status') {
+                log('Request blocked - already loading');
+                return null;
+            }
+            
             try {
+                isLoading = true;
+                
                 const url = new URL(API_BASE);
-                // FIXED: Ensure clean token without 'Bearer' prefix
-                const cleanToken = apiToken.replace(/^Bearer/i, '').trim();
-                url.searchParams.append('token', cleanToken);
+                url.searchParams.append('token', apiToken.trim());
                 url.searchParams.append('action', action);
+                
                 Object.keys(params).forEach(key => {
-                    url.searchParams.append(key, typeof params[key] === 'object' ? JSON.stringify(params[key]) : params[key]);
+                    if (params[key] !== undefined && params[key] !== null) {
+                        url.searchParams.append(key, String(params[key]));
+                    }
                 });
                 
-                log(`API Request: ${action}`, { 
-                    url: url.toString().replace(apiToken, '***'), 
-                    params: params 
+                log(`API Request: ${action}`, { params });
+                
+                const response = await fetch(url.toString(), {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
                 });
                 
-                const response = await fetch(url.toString());
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const responseText = await response.text();
-                
-                log(`API Response: ${action}`, { 
-                    status: response.status,
-                    contentLength: responseText.length 
-                });
                 
                 let data;
                 try {
@@ -703,120 +553,101 @@
                     throw new Error('Invalid response format');
                 }
                 
+                log(`API Response: ${action}`, { success: data.success });
+                
                 if (!data.success) {
-                    log('API Error', { action: action, error: data.error });
                     throw new Error(data.error || 'Request failed');
                 }
                 
                 return data;
             } catch (error) {
-                log('Request failed', { action: action, error: error.message });
-                showMessage(`Error: ${error.message}`);
+                log('Request failed', { action, error: error.message });
+                showMessage(`Error: ${error.message}`, 'error');
                 throw error;
+            } finally {
+                isLoading = false;
             }
         }
         
+        // FIXED: Status check function
         async function checkStatus() {
+            const btn = document.getElementById('statusBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '🔄 Checking...';
+            }
+            
             try {
+                if (!apiToken.trim()) {
+                    showMessage('Please enter an API token first', 'error');
+                    return;
+                }
+                
                 log('Checking system status');
                 const data = await makeRequest('status');
                 
-                log('Status response', {
-                    health: data.health,
-                    companies: data.companiesMonitored,
-                    urls: data.urlsTracked,
-                    lastCheck: data.lastCheck
-                });
-                
-                document.getElementById('systemStatus').textContent = data.health || 'operational';
-                
-                // Update counts directly from status response
-                if (data.companiesMonitored !== undefined) {
-                    document.getElementById('companyCount').textContent = data.companiesMonitored;
+                if (data) {
+                    document.getElementById('systemStatus').textContent = data.status || 'operational';
+                    document.getElementById('companyCount').textContent = data.companiesMonitored || 0;
+                    document.getElementById('urlCount').textContent = data.urlsTracked || 0;
+                    
+                    if (data.lastCheck && data.lastCheck !== 'never' && data.lastCheck !== 'Never') {
+                        const date = new Date(data.lastCheck);
+                        document.getElementById('lastCheck').textContent = date.toLocaleString();
+                    } else {
+                        document.getElementById('lastCheck').textContent = 'Never';
+                    }
+                    
+                    // Load configuration and recent changes
+                    await loadConfiguration();
+                    await loadRecentChanges();
+                    
+                    log('Status updated successfully');
                 }
-                if (data.urlsTracked !== undefined) {
-                    document.getElementById('urlCount').textContent = data.urlsTracked;
-                }
-                
-                // Update last check
-                if (data.lastCheck && data.lastCheck !== 'never') {
-                    const date = new Date(data.lastCheck);
-                    document.getElementById('lastCheck').textContent = date.toLocaleString();
-                } else {
-                    document.getElementById('lastCheck').textContent = 'Never';
-                }
-                
-                // Load configuration for additional data
-                await loadConfiguration();
-                
             } catch (error) {
                 log('Status check failed', { error: error.message });
                 document.getElementById('systemStatus').textContent = 'error';
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '🔄 Refresh Status';
+                }
             }
         }
         
+        // FIXED: Load configuration
         async function loadConfiguration() {
             try {
                 const data = await makeRequest('config');
-                currentConfig = data.config;
-                currentMonitors = data.monitors || [];
-                
-                // Update URL count
-                const totalUrls = currentMonitors.reduce((sum, m) => sum + (m.urls ? m.urls.length : 0), 0);
-                document.getElementById('urlCount').textContent = totalUrls;
-                document.getElementById('companyCount').textContent = currentMonitors.length;
-                
-                // Update configuration UI
-                if (currentConfig) {
+                if (data) {
+                    currentConfig = data.config;
+                    currentMonitors = data.monitors || [];
+                    
+                    // Update UI
                     updateConfigUI();
+                    updateUrlFilter();
+                    
+                    log('Configuration loaded', { companies: currentMonitors.length });
                 }
-                
-                // Update URL filter dropdown
-                updateUrlFilter();
-                
             } catch (error) {
-                console.error('Failed to load configuration:', error);
+                log('Failed to load configuration', { error: error.message });
             }
         }
         
         function updateConfigUI() {
-            if (!currentConfig) return;
-            
-            // Update threshold inputs
-            if (currentConfig.thresholds) {
-                document.getElementById('globalThreshold').value = currentConfig.thresholds.global || 25;
-            }
-            if (currentConfig.aiThresholds) {
-                document.getElementById('aiThreshold').value = currentConfig.aiThresholds.alertThreshold || 6;
-            }
-            
-            // Update company thresholds
-            const companyDiv = document.getElementById('companyThresholds');
-            companyDiv.innerHTML = currentMonitors.map(monitor => `
-                <div class="config-item">
-                    <h4>${monitor.company}</h4>
-                    <input type="number" id="threshold-${monitor.company.replace(/\s+/g, '-')}" 
-                           min="1" max="100" 
-                           value="${currentConfig.thresholds?.company?.[monitor.company] || currentConfig.thresholds?.global || 25}">
-                    <label>% change threshold</label>
-                </div>
-            `).join('');
-            
-            // Update monitor list
             const monitorDiv = document.getElementById('monitorList');
-            monitorDiv.innerHTML = currentMonitors.map(monitor => `
-                <div class="config-item">
-                    <h4>${monitor.company}</h4>
-                    <p>URLs: ${monitor.urls.join(', ')}</p>
-                    <button onclick="editMonitor('${monitor.company}')">Edit</button>
-                    <button onclick="removeMonitor('${monitor.company}')">Remove</button>
-                </div>
-            `).join('');
-            
-            // Update selectors
-            if (currentConfig.contentSelectors) {
-                document.getElementById('defaultSelector').value = currentConfig.contentSelectors.default || '';
-                document.getElementById('excludeSelector').value = currentConfig.contentSelectors.exclude || '';
+            if (currentMonitors && currentMonitors.length > 0) {
+                monitorDiv.innerHTML = currentMonitors.map(monitor => `
+                    <div class="config-item">
+                        <h4>${monitor.company}</h4>
+                        <p><strong>URLs (${monitor.urls ? monitor.urls.length : 0}):</strong></p>
+                        <ul>
+                            ${(monitor.urls || []).map(url => `<li><a href="${url}" target="_blank">${url}</a></li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+            } else {
+                monitorDiv.innerHTML = '<p style="color: #888;">No monitors configured yet.</p>';
             }
         }
         
@@ -825,397 +656,206 @@
             select.innerHTML = '<option value="">All URLs</option>';
             
             currentMonitors.forEach(monitor => {
-                monitor.urls.forEach(url => {
-                    select.innerHTML += `<option value="${url}">${monitor.company} - ${url}</option>`;
+                (monitor.urls || []).forEach(url => {
+                    select.innerHTML += `<option value="${url}">${monitor.company} - ${url.substring(0, 50)}...</option>`;
                 });
             });
         }
         
+        // FIXED: Generate baseline
         async function generateBaseline() {
+            const btn = document.getElementById('baselineBtn');
+            btn.disabled = true;
+            btn.textContent = '📊 Generating...';
+            
             try {
-                log('Starting baseline generation');
                 showMessage('Generating baseline... this may take a few minutes', 'info');
                 
                 const startTime = Date.now();
                 const data = await makeRequest('baseline');
                 const duration = ((Date.now() - startTime) / 1000).toFixed(1);
                 
-                log('Baseline generation completed', { 
-                    duration: `${duration}s`,
-                    companies: data.companies,
-                    results: data.results?.length || 0
-                });
-                
-                showMessage(`Baseline generated: ${data.companies} companies processed in ${duration}s`, 'success');
-                checkStatus();
+                if (data) {
+                    log('Baseline generation completed', { 
+                        duration: `${duration}s`,
+                        processed: data.processed,
+                        total: data.total
+                    });
+                    
+                    showMessage(`Baseline generated: ${data.processed}/${data.total} URLs processed in ${duration}s`, 'success');
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        console.warn('Baseline errors:', data.errors);
+                    }
+                    
+                    checkStatus();
+                }
             } catch (error) {
                 log('Baseline generation failed', { error: error.message });
-                showMessage(`Baseline generation failed: ${error.message}`);
+                showMessage(`Baseline generation failed: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📊 Generate Baseline';
             }
         }
         
+        // FIXED: Run monitor check
         async function runMonitorCheck() {
+            const btn = document.getElementById('monitorBtn');
+            btn.disabled = true;
+            btn.textContent = '🔍 Monitoring...';
+            
             try {
                 showMessage('Running monitor check... this may take a few minutes', 'info');
                 const data = await makeRequest('monitor', { checkAll: true });
-                showMessage(`Monitor check completed: ${data.relevantChanges || 0} changes detected`, 'success');
-                checkStatus();
-                loadRecentChanges();
-            } catch (error) {
-                showMessage(`Monitor check failed: ${error.message}`);
-            }
-        }
-        
-        async function runIntelligentMonitor() {
-            try {
-                showMessage('Running AI-powered analysis... this may take several minutes', 'info');
-                const data = await makeRequest('execute', { 
-                    functionName: 'processIntelligentMonitor',
-                    parameters: JSON.stringify([{ company: 'all' }])
-                });
-                showMessage(`AI analysis completed: ${data.result?.summary?.significantChanges || 0} significant changes detected`, 'success');
-                checkStatus();
-                loadRecentChanges();
-            } catch (error) {
-                showMessage(`AI analysis failed: ${error.message}`);
-            }
-        }
-        
-        async function loadExtractedData() {
-            try {
-                log('Loading extracted data');
-                const data = await makeRequest('execute', {
-                    functionName: 'getExtractedData',
-                    parameters: '[]'
-                });
                 
-                log('Extracted data response', { 
-                    success: data.success,
-                    hasResult: !!data.result,
-                    dataCount: data.result?.data?.length || 0
-                });
+                if (data) {
+                    showMessage(`Monitor check completed: ${data.changes ? data.changes.length : 0} changes detected`, 'success');
+                    checkStatus();
+                    loadRecentChanges();
+                }
+            } catch (error) {
+                showMessage(`Monitor check failed: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Run Monitor Check';
+            }
+        }
+        
+        // FIXED: Load extracted data (now loads URLs)
+        async function loadExtractedData() {
+            const btn = document.getElementById('refreshDataBtn');
+            btn.disabled = true;
+            btn.textContent = '🔄 Loading...';
+            
+            try {
+                log('Loading monitored URLs');
+                const data = await makeRequest('urls');
                 
                 const tbody = document.getElementById('extractedDataTable');
-                if (data.result?.data && data.result.data.length > 0) {
-                    tbody.innerHTML = data.result.data.map(item => `
+                if (data && data.urls && data.urls.length > 0) {
+                    tbody.innerHTML = data.urls.map(item => `
                         <tr>
-                            <td>${new Date(item.timestamp).toLocaleString()}</td>
-                            <td><a href="${item.url}" target="_blank">${item.url}</a></td>
-                            <td>${item.title || 'N/A'}</td>
-                            <td>${item.wordCount || 0}</td>
-                            <td>${item.preview?.substring(0, 100)}...</td>
-                            <td><button onclick="viewContent('${item.url}', '${item.timestamp}')">View</button></td>
+                            <td>${item.company}</td>
+                            <td><a href="${item.url}" target="_blank">${item.url.substring(0, 60)}...</a></td>
+                            <td>${item.type || 'unknown'}</td>
+                            <td>Monitored</td>
+                            <td><button onclick="viewUrl('${item.url}')">View</button></td>
                         </tr>
                     `).join('');
-                    log(`Displayed ${data.result.data.length} extracted data items`);
+                    log(`Displayed ${data.urls.length} monitored URLs`);
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">No extracted data found</td></tr>';
-                    log('No extracted data to display');
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">No URLs configured</td></tr>';
+                    log('No URLs to display');
                 }
             } catch (error) {
-                log('Failed to load extracted data', { error: error.message });
+                log('Failed to load URLs', { error: error.message });
                 const tbody = document.getElementById('extractedDataTable');
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #c0392b;">Error loading data: ' + error.message + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #c0392b;">Error loading data: ' + error.message + '</td></tr>';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Refresh Data';
             }
         }
         
+        // FIXED: Load change history
         async function loadChangeHistory() {
+            const btn = document.getElementById('loadChangesBtn');
+            btn.disabled = true;
+            btn.textContent = '🔄 Loading...';
+            
             try {
-                const urlFilter = document.getElementById('changeUrlFilter').value;
-                const data = await makeRequest('execute', {
-                    functionName: 'getChangeHistory',
-                    parameters: JSON.stringify([urlFilter])
-                });
+                const data = await makeRequest('changes');
                 
                 const tbody = document.getElementById('changeHistoryTable');
-                if (data.result?.changes && data.result.changes.length > 0) {
-                    tbody.innerHTML = data.result.changes.map(change => {
-                        const aiScoreClass = change.relevanceScore >= 8 ? 'ai-score-high' : 
-                                           change.relevanceScore >= 6 ? 'ai-score-medium' : 'ai-score-low';
-                        return `
-                            <tr>
-                                <td>${new Date(change.timestamp).toLocaleString()}</td>
-                                <td>${change.company}</td>
-                                <td><a href="${change.url}" target="_blank">${change.url.substring(0, 50)}...</a></td>
-                                <td><span class="threshold-indicator ${getThresholdClass(change.changeMagnitude)}">${change.changeMagnitude || 0}%</span></td>
-                                <td><span class="ai-score ${aiScoreClass}">${change.relevanceScore || 0}</span></td>
-                                <td>${change.summary || 'N/A'}</td>
-                                <td><button onclick="viewDiff('${change.url}', '${change.timestamp}')">View Diff</button></td>
-                            </tr>
-                        `;
-                    }).join('');
+                if (data && data.changes && data.changes.length > 0) {
+                    tbody.innerHTML = data.changes.map(change => `
+                        <tr>
+                            <td>${new Date(change.timestamp).toLocaleString()}</td>
+                            <td>${change.company || 'Unknown'}</td>
+                            <td><a href="${change.url}" target="_blank">${change.url.substring(0, 40)}...</a></td>
+                            <td>${change.type || change.changeType || 'change'}</td>
+                            <td>${change.summary || 'N/A'}</td>
+                            <td>${change.relevance || change.relevanceScore || 0}/10</td>
+                        </tr>
+                    `).join('');
+                    log(`Displayed ${data.changes.length} changes`);
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #888;">No changes found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">No changes found</td></tr>';
+                    log('No changes to display');
                 }
             } catch (error) {
-                console.error('Failed to load change history:', error);
+                log('Failed to load change history', { error: error.message });
+                const tbody = document.getElementById('changeHistoryTable');
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #c0392b;">Error loading changes: ' + error.message + '</td></tr>';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Load Changes';
             }
         }
         
+        // FIXED: Load recent changes for dashboard
         async function loadRecentChanges() {
             try {
-                const data = await makeRequest('execute', {
-                    functionName: 'getChangeHistory',
-                    parameters: JSON.stringify([''])
-                });
+                const data = await makeRequest('changes');
                 
                 const container = document.getElementById('recentChanges');
-                if (data.result?.changes && data.result.changes.length > 0) {
-                    const recentChanges = data.result.changes.slice(0, 5);
+                if (data && data.changes && data.changes.length > 0) {
+                    const recentChanges = data.changes.slice(0, 5);
                     container.innerHTML = recentChanges.map(change => `
                         <div class="config-item">
-                            <h4>${change.company} - ${new Date(change.timestamp).toLocaleString()}</h4>
+                            <h4>${change.company || 'Unknown'} - ${new Date(change.timestamp).toLocaleString()}</h4>
                             <p><strong>URL:</strong> ${change.url}</p>
-                            <p><strong>Change:</strong> ${change.changeMagnitude || 0}% | <strong>AI Score:</strong> ${change.relevanceScore || 0}/10</p>
+                            <p><strong>Type:</strong> ${change.type || change.changeType || 'change'}</p>
                             <p><strong>Summary:</strong> ${change.summary || 'N/A'}</p>
+                            <p><strong>Relevance:</strong> ${change.relevance || change.relevanceScore || 0}/10</p>
                         </div>
                     `).join('');
                 } else {
                     container.innerHTML = '<p style="color: #888;">No recent changes detected.</p>';
                 }
             } catch (error) {
-                console.error('Failed to load recent changes:', error);
+                log('Failed to load recent changes', { error: error.message });
             }
         }
         
-        function getThresholdClass(magnitude) {
-            if (magnitude >= 50) return 'threshold-high';
-            if (magnitude >= 25) return 'threshold-medium';
-            return 'threshold-low';
-        }
-        
-        async function saveThresholds() {
-            try {
-                const updates = {
-                    global: parseInt(document.getElementById('globalThreshold').value),
-                    company: {},
-                    ai: {
-                        alertThreshold: parseInt(document.getElementById('aiThreshold').value)
-                    }
-                };
-                
-                // Collect company thresholds
-                currentMonitors.forEach(monitor => {
-                    const input = document.getElementById(`threshold-${monitor.company.replace(/\s+/g, '-')}`);
-                    if (input) {
-                        updates.company[monitor.company] = parseInt(input.value);
-                    }
-                });
-                
-                await makeRequest('execute', {
-                    functionName: 'updateThresholds',
-                    parameters: JSON.stringify([updates])
-                });
-                
-                showMessage('Thresholds saved successfully', 'success');
-                loadConfiguration();
-            } catch (error) {
-                showMessage(`Failed to save thresholds: ${error.message}`);
-            }
-        }
-        
-        async function saveSelectors() {
-            try {
-                const updates = {
-                    default: document.getElementById('defaultSelector').value,
-                    exclude: document.getElementById('excludeSelector').value
-                };
-                
-                await makeRequest('execute', {
-                    functionName: 'updateSelectors',
-                    parameters: JSON.stringify([updates])
-                });
-                
-                showMessage('Selectors saved successfully', 'success');
-                loadConfiguration();
-            } catch (error) {
-                showMessage(`Failed to save selectors: ${error.message}`);
-            }
-        }
-        
+        // FIXED: Load logs
         async function loadLogs() {
+            const btn = document.getElementById('logsBtn');
+            btn.disabled = true;
+            btn.textContent = '🔄 Loading...';
+            
             try {
                 const data = await makeRequest('logs', { limit: 100 });
+                
                 const logArea = document.getElementById('logArea');
-                
-                if (data.logs && data.logs.length > 0) {
-                    logArea.innerHTML = data.logs.map(log => 
-                        `[${log.timestamp}] ${log.type}: ${log.message}`
+                if (data && data.logs && data.logs.length > 0) {
+                    logArea.innerHTML = data.logs.map(logEntry => 
+                        `[${logEntry.timestamp}] ${logEntry.type.toUpperCase()}: ${logEntry.message}`
                     ).join('\n');
+                    log(`Displayed ${data.logs.length} log entries`);
                 } else {
-                    logArea.innerHTML = 'No logs available';
+                    logArea.innerHTML = 'No logs available - system is operational';
                 }
             } catch (error) {
-                showMessage(`Failed to load logs: ${error.message}`);
+                log('Failed to load logs', { error: error.message });
+                document.getElementById('logArea').innerHTML = 'Error loading logs: ' + error.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 Refresh Logs';
             }
         }
         
-        // ============ THEBRAIN FUNCTIONS ============
-        
-        async function testTheBrain() {
-            try {
-                showMessage('Testing TheBrain integration...', 'info');
-                const data = await makeRequest('execute', {
-                    functionName: 'testTheBrainIntegration',
-                    parameters: '[]'
-                });
-                
-                if (data.success && data.result.success) {
-                    showMessage(`🧠 TheBrain integration test successful! Brain ID: ${data.result.brainId}`, 'success');
-                    loadTheBrainStatus();
-                } else {
-                    showMessage(`🧠 TheBrain test failed: ${data.result.error || 'Unknown error'}`, 'error');
-                }
-            } catch (error) {
-                showMessage(`TheBrain test failed: ${error.message}`, 'error');
-            }
+        // Helper functions
+        function viewUrl(url) {
+            window.open(url, '_blank');
         }
         
-        async function testTheBrainConnection() {
-            try {
-                log('Testing TheBrain connection');
-                showMessage('Testing TheBrain connection...', 'info');
-                const data = await makeRequest('execute', {
-                    functionName: 'testTheBrainConnection',
-                    parameters: '[]'
-                });
-                
-                log('TheBrain connection response', { 
-                    success: data.success, 
-                    result: data.result 
-                });
-                
-                if (data.success && data.result.success) {
-                    showMessage('🔗 TheBrain connection successful!', 'success');
-                    document.getElementById('brainStatus').textContent = 'Connected';
-                } else {
-                    const error = data.result?.error || 'Unknown error';
-                    log('TheBrain connection failed', { error: error });
-                    showMessage(`Connection failed: ${error}`, 'error');
-                    document.getElementById('brainStatus').textContent = 'Disconnected';
-                }
-            } catch (error) {
-                log('TheBrain connection test error', { error: error.message });
-                showMessage(`Connection test failed: ${error.message}`, 'error');
-                document.getElementById('brainStatus').textContent = 'Error';
-            }
-        }
-        
-        async function createCompetitiveBrain() {
-            try {
-                showMessage('Creating competitive intelligence brain...', 'info');
-                const data = await makeRequest('execute', {
-                    functionName: 'createCompetitiveIntelligenceBrain',
-                    parameters: '[]'
-                });
-                
-                if (data.success && data.result.success) {
-                    showMessage(`🧠 Competitive intelligence brain created successfully!`, 'success');
-                    loadTheBrainStatus();
-                } else {
-                    showMessage(`Brain creation failed: ${data.result.error}`, 'error');
-                }
-            } catch (error) {
-                showMessage(`Brain creation failed: ${error.message}`, 'error');
-            }
-        }
-        
-        async function addCompaniesToBrain() {
-            try {
-                showMessage('Adding companies to brain...', 'info');
-                const data = await makeRequest('execute', {
-                    functionName: 'addCompaniesToBrain',
-                    parameters: '[]'
-                });
-                
-                if (data.success && data.result.success) {
-                    showMessage(`🏢 ${data.result.companiesAdded} companies added to brain!`, 'success');
-                    loadTheBrainStatus();
-                } else {
-                    showMessage(`Adding companies failed: ${data.result.error}`, 'error');
-                }
-            } catch (error) {
-                showMessage(`Adding companies failed: ${error.message}`, 'error');
-            }
-        }
-        
-        async function generateLandscapeAnalysis() {
-            try {
-                showMessage('Generating competitive landscape analysis...', 'info');
-                const data = await makeRequest('execute', {
-                    functionName: 'generateCompetitiveLandscape',
-                    parameters: '[]'
-                });
-                
-                if (data.success && data.result.success) {
-                    showMessage(`📊 Competitive landscape analysis generated! Companies analyzed: ${data.result.companiesAnalyzed}`, 'success');
-                    loadTheBrainStatus();
-                } else {
-                    showMessage(`Analysis generation failed: ${data.result.error}`, 'error');
-                }
-            } catch (error) {
-                showMessage(`Analysis generation failed: ${error.message}`, 'error');
-            }
-        }
-        
-        async function loadTheBrainStatus() {
-            try {
-                const data = await makeRequest('execute', {
-                    functionName: 'getTheBrainStatus',
-                    parameters: '[]'
-                });
-                
-                if (data.success && data.result) {
-                    const status = data.result;
-                    
-                    // Update status display
-                    document.getElementById('brainStatus').textContent = status.enabled ? 'Enabled' : 'Disabled';
-                    
-                    // Update integration status
-                    const statusDiv = document.getElementById('brainIntegrationStatus');
-                    statusDiv.innerHTML = `
-                        <div class="config-item">
-                            <h4>Integration Status</h4>
-                            <p><strong>Enabled:</strong> ${status.enabled ? '✅ Yes' : '❌ No'}</p>
-                            <p><strong>API Key:</strong> ${status.apiKey === 'configured' ? '✅ Configured' : '❌ Missing'}</p>
-                            <p><strong>Brain ID:</strong> ${status.brainId || 'Not created'}</p>
-                            <p><strong>Brain Name:</strong> ${status.brainName}</p>
-                            <p><strong>Categories:</strong> ${status.categories}</p>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Failed to load TheBrain status:', error);
-            }
-        }
-        
-        // ============ PLACEHOLDER FUNCTIONS ============
-        
-        function viewContent(url, timestamp) {
-            alert(`View content for ${url} at ${timestamp} - Coming soon!`);
-        }
-        
-        function viewDiff(url, timestamp) {
-            alert(`View diff for ${url} at ${timestamp} - Coming soon!`);
-        }
-        
-        function editMonitor(company) {
-            alert(`Edit monitor for ${company} - Coming soon!`);
-        }
-        
-        function removeMonitor(company) {
-            if (confirm(`Remove monitor for ${company}?`)) {
-                alert('Remove functionality coming soon!');
-            }
-        }
-        
-        function addMonitor() {
-            alert('Add monitor functionality coming soon!');
-        }
-        
-        // Auto-refresh status every 60 seconds
+        // Auto-refresh status every 60 seconds (but not during active operations)
         setInterval(() => {
-            if (apiToken) checkStatus();
+            if (apiToken && !isLoading) {
+                checkStatus();
+            }
         }, 60000);
     </script>
 </body>
