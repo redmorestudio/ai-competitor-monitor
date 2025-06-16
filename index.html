@@ -580,15 +580,44 @@
     <script>
         // Update API endpoint to latest version
         const API_BASE = 'https://script.google.com/macros/s/AKfycbxt4Wkdxk7HLKC_VllYgpjHgntBckt_WCjTMDX9BJ_UHBlpTGrjNjLcpHqPJCerBAtT/exec';
-        let apiToken = localStorage.getItem('apiToken') || '';
+        let apiToken = '';
         let currentConfig = null;
         let currentMonitors = [];
         
-        // Initialize
-        if (apiToken) {
-            document.getElementById('apiToken').value = apiToken;
-            checkStatus();
+        // Enhanced logging
+        const log = (message, data = null) => {
+            const timestamp = new Date().toISOString();
+            console.log(`[${timestamp}] ${message}`, data || '');
+            
+            // Also add to visible log if on logs tab
+            const logArea = document.getElementById('logArea');
+            if (logArea && document.getElementById('logs-tab').classList.contains('active')) {
+                logArea.innerHTML = `[${timestamp}] ${message} ${data ? JSON.stringify(data) : ''}\n` + logArea.innerHTML;
+            }
+        };
+        
+        // Initialize with clean token
+        function initializeApp() {
+            // Clear any corrupted token
+            const storedToken = localStorage.getItem('apiToken') || '';
+            // Clean the token - remove any duplicates
+            if (storedToken.includes('dev-token-change-me')) {
+                apiToken = 'dev-token-change-me';
+                localStorage.setItem('apiToken', apiToken);
+                log('Cleaned corrupted token');
+            } else {
+                apiToken = storedToken;
+            }
+            
+            if (apiToken) {
+                document.getElementById('apiToken').value = apiToken;
+                log('Loaded token from storage');
+                checkStatus();
+            }
         }
+        
+        // Call initialization
+        initializeApp();
         
         // Tab switching
         function switchTab(tabName) {
@@ -613,9 +642,23 @@
         }
         
         function saveToken() {
-            apiToken = document.getElementById('apiToken').value;
+            const newToken = document.getElementById('apiToken').value;
+            log('Saving token', { length: newToken.length });
+            
+            // Ensure clean token storage
+            apiToken = newToken;
             localStorage.setItem('apiToken', apiToken);
-            showMessage('Token saved', 'success');
+            
+            // Verify storage
+            const verified = localStorage.getItem('apiToken');
+            if (verified === apiToken) {
+                showMessage('Token saved successfully', 'success');
+                log('Token verified after save');
+            } else {
+                showMessage('Token save verification failed!', 'error');
+                log('Token verification failed', { expected: apiToken, actual: verified });
+            }
+            
             checkStatus();
         }
         
@@ -636,15 +679,35 @@
                     url.searchParams.append(key, typeof params[key] === 'object' ? JSON.stringify(params[key]) : params[key]);
                 });
                 
+                log(`API Request: ${action}`, { 
+                    url: url.toString().replace(apiToken, '***'), 
+                    params: params 
+                });
+                
                 const response = await fetch(url.toString());
-                const data = await response.json();
+                const responseText = await response.text();
+                
+                log(`API Response: ${action}`, { 
+                    status: response.status,
+                    contentLength: responseText.length 
+                });
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    log('Failed to parse response', { responseText: responseText.substring(0, 200) });
+                    throw new Error('Invalid response format');
+                }
                 
                 if (!data.success) {
+                    log('API Error', { action: action, error: data.error });
                     throw new Error(data.error || 'Request failed');
                 }
                 
                 return data;
             } catch (error) {
+                log('Request failed', { action: action, error: error.message });
                 showMessage(`Error: ${error.message}`);
                 throw error;
             }
@@ -652,24 +715,39 @@
         
         async function checkStatus() {
             try {
+                log('Checking system status');
                 const data = await makeRequest('status');
+                
+                log('Status response', {
+                    health: data.health,
+                    companies: data.companiesMonitored,
+                    urls: data.urlsTracked,
+                    lastCheck: data.lastCheck
+                });
+                
                 document.getElementById('systemStatus').textContent = data.health || 'operational';
                 
-                // Update counts
-                if (data.configuration) {
-                    document.getElementById('companyCount').textContent = data.configuration.monitorsConfigured || 0;
+                // Update counts directly from status response
+                if (data.companiesMonitored !== undefined) {
+                    document.getElementById('companyCount').textContent = data.companiesMonitored;
+                }
+                if (data.urlsTracked !== undefined) {
+                    document.getElementById('urlCount').textContent = data.urlsTracked;
                 }
                 
                 // Update last check
-                if (data.lastRun && data.lastRun.monitor !== 'never') {
-                    const date = new Date(data.lastRun.monitor);
+                if (data.lastCheck && data.lastCheck !== 'never') {
+                    const date = new Date(data.lastCheck);
                     document.getElementById('lastCheck').textContent = date.toLocaleString();
+                } else {
+                    document.getElementById('lastCheck').textContent = 'Never';
                 }
                 
-                // Load configuration to get URL count
+                // Load configuration for additional data
                 await loadConfiguration();
                 
             } catch (error) {
+                log('Status check failed', { error: error.message });
                 document.getElementById('systemStatus').textContent = 'error';
             }
         }
@@ -752,11 +830,23 @@
         
         async function generateBaseline() {
             try {
+                log('Starting baseline generation');
                 showMessage('Generating baseline... this may take a few minutes', 'info');
+                
+                const startTime = Date.now();
                 const data = await makeRequest('baseline');
-                showMessage(`Baseline generated: ${data.companies} companies processed`, 'success');
+                const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+                
+                log('Baseline generation completed', { 
+                    duration: `${duration}s`,
+                    companies: data.companies,
+                    results: data.results?.length || 0
+                });
+                
+                showMessage(`Baseline generated: ${data.companies} companies processed in ${duration}s`, 'success');
                 checkStatus();
             } catch (error) {
+                log('Baseline generation failed', { error: error.message });
                 showMessage(`Baseline generation failed: ${error.message}`);
             }
         }
@@ -790,9 +880,16 @@
         
         async function loadExtractedData() {
             try {
+                log('Loading extracted data');
                 const data = await makeRequest('execute', {
                     functionName: 'getExtractedData',
                     parameters: '[]'
+                });
+                
+                log('Extracted data response', { 
+                    success: data.success,
+                    hasResult: !!data.result,
+                    dataCount: data.result?.data?.length || 0
                 });
                 
                 const tbody = document.getElementById('extractedDataTable');
@@ -807,11 +904,15 @@
                             <td><button onclick="viewContent('${item.url}', '${item.timestamp}')">View</button></td>
                         </tr>
                     `).join('');
+                    log(`Displayed ${data.result.data.length} extracted data items`);
                 } else {
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">No extracted data found</td></tr>';
+                    log('No extracted data to display');
                 }
             } catch (error) {
-                console.error('Failed to load extracted data:', error);
+                log('Failed to load extracted data', { error: error.message });
+                const tbody = document.getElementById('extractedDataTable');
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #c0392b;">Error loading data: ' + error.message + '</td></tr>';
             }
         }
         
@@ -969,21 +1070,31 @@
         
         async function testTheBrainConnection() {
             try {
+                log('Testing TheBrain connection');
                 showMessage('Testing TheBrain connection...', 'info');
                 const data = await makeRequest('execute', {
                     functionName: 'testTheBrainConnection',
                     parameters: '[]'
                 });
                 
+                log('TheBrain connection response', { 
+                    success: data.success, 
+                    result: data.result 
+                });
+                
                 if (data.success && data.result.success) {
                     showMessage('🔗 TheBrain connection successful!', 'success');
                     document.getElementById('brainStatus').textContent = 'Connected';
                 } else {
-                    showMessage(`Connection failed: ${data.result.error}`, 'error');
+                    const error = data.result?.error || 'Unknown error';
+                    log('TheBrain connection failed', { error: error });
+                    showMessage(`Connection failed: ${error}`, 'error');
                     document.getElementById('brainStatus').textContent = 'Disconnected';
                 }
             } catch (error) {
+                log('TheBrain connection test error', { error: error.message });
                 showMessage(`Connection test failed: ${error.message}`, 'error');
+                document.getElementById('brainStatus').textContent = 'Error';
             }
         }
         
