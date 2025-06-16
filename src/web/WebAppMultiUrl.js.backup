@@ -1,0 +1,381 @@
+/**
+ * WebApp API Updates for Multi-URL Support
+ * Updates the API endpoints to handle multi-URL configuration
+ */
+
+// ============ API ENDPOINT UPDATES ============
+
+/**
+ * Get configuration endpoint - updated for multi-URL
+ */
+function doGetConfig() {
+  try {
+    const config = getMonitorConfigurationsMultiUrl();
+    
+    // Transform config for API response with proper null checking
+    const apiConfig = config.map(company => ({
+      company: company.company,
+      urls: (company.urls || []).map(urlObj => {
+        // Handle both string URLs and URL objects with null checking
+        if (typeof urlObj === 'string' && urlObj) {
+          return urlObj;
+        } else if (urlObj && typeof urlObj === 'object' && urlObj.url) {
+          return urlObj.url; // Extract URL string from object
+        }
+        return null;
+      }).filter(url => url !== null && url !== '')
+    }));
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      config: {
+        monitors: apiConfig
+      },
+      monitors: apiConfig,
+      companies: apiConfig,
+      total: apiConfig.length,
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString(),
+      path: 'config'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Get recent changes - updated to include URL type
+ */
+function doGetChanges() {
+  const sheet = getOrCreateMonitorSheet();
+  if (!sheet.success) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: 'Sheet not found'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const ss = sheet.spreadsheet;
+  const changesSheet = ss.getSheetByName('Changes');
+  
+  if (!changesSheet || changesSheet.getLastRow() <= 1) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      changes: [],
+      message: 'No changes recorded yet'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // Get recent changes
+  const data = changesSheet.getDataRange().getValues();
+  const headers = data[0];
+  const changes = [];
+  
+  // Get last 50 changes
+  const startRow = Math.max(1, data.length - 50);
+  
+  for (let i = startRow; i < data.length; i++) {
+    const row = data[i];
+    const change = {
+      timestamp: row[0],
+      company: row[1],
+      url: row[2],
+      changeType: row[3],
+      summary: row[4],
+      relevanceScore: row[7],
+      urlType: row[9] || 'general', // New column for URL type
+      magnitude: row[10] || 'unknown' // New column for magnitude
+    };
+    
+    // Only include relevant changes
+    if (change.relevanceScore >= 6) {
+      changes.push(change);
+    }
+  }
+  
+  // Group by company and type
+  const grouped = {};
+  changes.forEach(change => {
+    if (!grouped[change.company]) {
+      grouped[change.company] = {
+        company: change.company,
+        changes: [],
+        urlTypes: {}
+      };
+    }
+    
+    grouped[change.company].changes.push(change);
+    grouped[change.company].urlTypes[change.urlType] = 
+      (grouped[change.company].urlTypes[change.urlType] || 0) + 1;
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    totalChanges: changes.length,
+    recentChanges: changes.slice(-20).reverse(), // Most recent first
+    byCompany: Object.values(grouped),
+    lastUpdated: new Date().toISOString()
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Get monitoring statistics - enhanced for multi-URL
+ */
+function doGetStats() {
+  const stats = getMultiUrlStatus();
+  const sheet = getOrCreateMonitorSheet();
+  
+  if (!sheet.success) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: 'Sheet not found'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const ss = sheet.spreadsheet;
+  
+  // Get dashboard data
+  const dashboardSheet = ss.getSheetByName('MultiUrlDashboard');
+  let recentRuns = [];
+  
+  if (dashboardSheet && dashboardSheet.getLastRow() > 1) {
+    const dashData = dashboardSheet.getDataRange().getValues();
+    const lastRows = Math.min(10, dashData.length - 1);
+    
+    for (let i = dashData.length - lastRows; i < dashData.length; i++) {
+      recentRuns.push({
+        timestamp: dashData[i][0],
+        companies: dashData[i][1],
+        totalUrls: dashData[i][2],
+        urlsChecked: dashData[i][3],
+        changes: dashData[i][4],
+        alerts: dashData[i][5],
+        topChangeType: dashData[i][6],
+        avgChangePercent: dashData[i][7]
+      });
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    multiUrl: {
+      enabled: stats.enabled,
+      companies: stats.stats.totalCompanies,
+      totalUrls: stats.stats.totalUrls,
+      avgUrlsPerCompany: stats.stats.avgUrls
+    },
+    urlTypes: stats.typeDistribution.distribution,
+    recentRuns: recentRuns.reverse(), // Most recent first
+    performance: {
+      avgRunTime: '~2 minutes',
+      urlsPerMinute: 30,
+      costPerRun: '$0.00' // Free tier
+    },
+    lastUpdated: new Date().toISOString()
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Monitor specific company with all URLs
+ */
+function doMonitorCompany(company) {
+  try {
+    const result = monitorCompanyMultiUrl(company);
+    
+    if (!result) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: 'Company not found'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      company: company,
+      results: result,
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Get detailed company profile with all URLs
+ */
+function doGetCompanyProfile(company) {
+  const config = COMPLETE_MONITOR_CONFIG.find(c => c.company === company);
+  
+  if (!config) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: 'Company not found'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // Get recent changes for this company
+  const sheet = getOrCreateMonitorSheet();
+  let recentChanges = [];
+  
+  if (sheet.success) {
+    const ss = sheet.spreadsheet;
+    const changesSheet = ss.getSheetByName('Changes');
+    
+    if (changesSheet && changesSheet.getLastRow() > 1) {
+      const data = changesSheet.getDataRange().getValues();
+      
+      for (let i = data.length - 1; i > 0 && recentChanges.length < 10; i--) {
+        if (data[i][1] === company) {
+          recentChanges.push({
+            timestamp: data[i][0],
+            url: data[i][2],
+            urlType: data[i][9] || 'general',
+            summary: data[i][4],
+            relevanceScore: data[i][7]
+          });
+        }
+      }
+    }
+  }
+  
+  // Get baseline status for each URL
+  const urlStatuses = config.urls.map(urlConfig => {
+    const baseline = getBaselineForUrl(urlConfig.url);
+    return {
+      url: urlConfig.url,
+      type: urlConfig.type,
+      hasBaseline: !!baseline,
+      lastChecked: baseline?.timestamp || 'Never'
+    };
+  });
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    company: company,
+    urls: config.urls,
+    urlStatuses: urlStatuses,
+    recentChanges: recentChanges,
+    stats: {
+      totalUrls: config.urls.length,
+      urlTypes: config.urls.map(u => u.type),
+      changeCount: recentChanges.length
+    },
+    lastUpdated: new Date().toISOString()
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============ UPDATE MAIN WEB APP HANDLER ============
+
+/**
+ * Enhanced doGet handler with multi-URL endpoints
+ */
+function doGet(e) {
+  // Enable CORS
+  const output = ContentService.createTextOutput();
+  output.setMimeType(ContentService.MimeType.JSON);
+  
+  const path = e.parameter.path || 'status';
+  const company = e.parameter.company;
+  
+  try {
+    switch(path) {
+      case 'status':
+        return doGetSystemStatus();
+        
+      case 'config':
+        return doGetConfig();
+        
+      case 'changes':
+        return doGetChanges();
+        
+      case 'stats':
+        return doGetStats();
+        
+      case 'monitor':
+        if (company) {
+          return doMonitorCompany(company);
+        }
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: 'Company parameter required'
+        })).setMimeType(ContentService.MimeType.JSON);
+        
+      case 'company':
+        if (company) {
+          return doGetCompanyProfile(company);
+        }
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: 'Company parameter required'
+        })).setMimeType(ContentService.MimeType.JSON);
+        
+      case 'run':
+        // Trigger full monitoring (be careful with this)
+        const runResult = runCompleteMultiUrlMonitoring();
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Monitoring triggered',
+          stats: runResult.stats
+        })).setMimeType(ContentService.MimeType.JSON);
+        
+      default:
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: 'Unknown path',
+          availablePaths: ['status', 'config', 'changes', 'stats', 'monitor', 'company', 'run']
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString(),
+      path: path
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * Get system status with multi-URL info
+ */
+function doGetSystemStatus() {
+  const multiUrlStatus = getMultiUrlStatus();
+  const props = PropertiesService.getScriptProperties();
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    status: 'operational',
+    version: '2.0-multi-url',
+    features: {
+      multiUrl: multiUrlStatus.enabled,
+      llm: props.getProperty('LLM_ENABLED') === 'true',
+      magnitude: props.getProperty('MAGNITUDE_DETECTION_ENABLED') === 'true',
+      unified: props.getProperty('UNIFIED_INTELLIGENCE_ENABLED') === 'true'
+    },
+    monitoring: {
+      companies: multiUrlStatus.stats.totalCompanies,
+      totalUrls: multiUrlStatus.stats.totalUrls,
+      avgUrlsPerCompany: multiUrlStatus.stats.avgUrls,
+      lastRun: multiUrlStatus.lastRun
+    },
+    endpoints: {
+      base: 'https://script.google.com/macros/s/AKfycbxZo13ROsWSHxicqsbl9rEKSEuO-[...]/exec',
+      available: [
+        '?path=status - System status',
+        '?path=config - Get configuration',
+        '?path=changes - Recent changes',
+        '?path=stats - Monitoring statistics',
+        '?path=monitor&company=X - Monitor specific company',
+        '?path=company&company=X - Company profile',
+        '?path=run - Trigger monitoring (admin only)'
+      ]
+    },
+    timestamp: new Date().toISOString()
+  })).setMimeType(ContentService.MimeType.JSON);
+}
