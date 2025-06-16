@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test New Deployment v47</title>
+</head>
+<body>
+    <h1>Testing v47 Deployment with Fixed Permissions</h1>
+    <button onclick="runTest()">Run Permission Test</button>
+    <pre id="output"></pre>
+    
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzB2-PdjKdZ9tUsSFTLKqqToZS5b1sLdCq08YtgwuonTTTP7dNOL7c8j-nMgt29kUnasw/exec';
+        const TOKEN = 'dev-token-change-me';
+        
+        async function runTest() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing...\n\n';
+            
+            try {
+                // Test permissions endpoint
+                const permUrl = `${API_URL}?token=${TOKEN}&action=execute&functionName=testPermissions&parameters=[]`;
+                const permResp = await fetch(permUrl);
+                const permData = await permResp.json();
+                
+                output.textContent += 'Permission Test Results:\n';
+                output.textContent += JSON.stringify(permData, null, 2);
+                
+                // Test baseline generation
+                output.textContent += '\n\nTesting baseline generation...\n';
+                const baselineUrl = `${API_URL}?token=${TOKEN}&action=baseline`;
+                const baselineResp = await fetch(baselineUrl);
+                const baselineData = await baselineResp.json();
+                
+                output.textContent += '\nBaseline Test Results:\n';
+                output.textContent += JSON.stringify(baselineData, null, 2);
+                
+            } catch (e) {
+                output.textContent += '\nError: ' + e.message;
+            }
+        }
+    </script>
+</body>
+</html>

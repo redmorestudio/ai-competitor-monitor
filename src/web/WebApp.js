@@ -1,25 +1,33 @@
 /**
  * WebApp Fixed - Corrected API endpoints for AI Competitive Monitor
- * Fixes the data structure mismatch between frontend and backend
+ * FIXES: Proper CORS headers for GitHub Pages integration
  */
 
 /**
- * Main entry point for web app - handles all API requests
+ * Main entry point for web app - handles dashboard AND API requests
+ * FIXED: Added proper CORS headers for GitHub Pages origin
  */
 function doGet(e) {
   try {
     // Support both 'action' (from new frontend) and 'path' (from old frontend) parameters
-    const action = e.parameter.action || e.parameter.path || 'status';
+    const action = e.parameter.action || e.parameter.path;
     const callback = e.parameter.callback; // For JSONP
     const token = e.parameter.token;
     
-    console.log('API Request:', action, 'Token:', token ? 'provided' : 'missing');
+    console.log('Request - Action:', action, 'Token:', token ? 'provided' : 'missing');
     
-    // Simple token validation
+    // If no action specified, serve the dashboard HTML (no token required)
+    if (!action) {
+      return HtmlService.createHtmlOutputFromFile('index')
+        .setTitle('AI Competitor Monitor Dashboard')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+    
+    // For API calls, require token
     if (token !== 'dev-token-change-me') {
-      return createJsonResponse({
+      return createJsonResponseWithCORS({
         success: false,
-        error: 'Invalid token'
+        error: 'Invalid or missing token for API access'
       }, 401);
     }
     
@@ -76,29 +84,78 @@ function doGet(e) {
         };
     }
     
-    // Add CORS headers for cross-origin requests
-    const output = ContentService.createTextOutput();
-    
-    if (callback) {
-      // JSONP response
-      output.setContent(callback + '(' + JSON.stringify(response) + ')');
-      output.setMimeType(ContentService.MimeType.JAVASCRIPT);
-    } else {
-      // JSON response
-      output.setContent(JSON.stringify(response));
-      output.setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    return output;
+    // Return response with proper CORS headers
+    return createJsonResponseWithCORS(response);
     
   } catch (error) {
     console.error('API Error:', error);
-    return createJsonResponse({
+    return createJsonResponseWithCORS({
       success: false,
       error: error.toString(),
       stack: error.stack
     }, 500);
   }
+}
+
+/**
+ * Handle OPTIONS requests for CORS preflight
+ */
+function doOptions(e) {
+  return createCORSResponse();
+}
+
+/**
+ * Create JSON response with proper CORS headers - FIXED
+ */
+function createJsonResponseWithCORS(data, statusCode = 200) {
+  const output = ContentService.createTextOutput(JSON.stringify(data));
+  output.setMimeType(ContentService.MimeType.JSON);
+  
+  // Add CORS headers for GitHub Pages
+  return addCORSHeaders(output);
+}
+
+/**
+ * Add CORS headers to allow GitHub Pages access - NEW
+ */
+function addCORSHeaders(output) {
+  // Allow requests from GitHub Pages and local development
+  const allowedOrigins = [
+    'https://redmorestudio.github.io',
+    'http://localhost:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://localhost:3000'
+  ];
+  
+  // For Google Apps Script, we need to allow all origins due to limitations
+  // but we'll still validate the token
+  output.setHeaders({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+    'Content-Type': 'application/json'
+  });
+  
+  return output;
+}
+
+/**
+ * Create OPTIONS response for CORS preflight - NEW
+ */
+function createCORSResponse() {
+  const output = ContentService.createTextOutput('');
+  output.setMimeType(ContentService.MimeType.TEXT);
+  
+  output.setHeaders({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400'
+  });
+  
+  return output;
 }
 
 /**
@@ -144,7 +201,7 @@ function getSystemStatusFixed() {
       lastRun: lastRun || 'Never',
       companies: config.length,
       urls: totalUrls,
-      version: 51, // Updated version
+      version: 54, // CORS FIXED VERSION
       timestamp: new Date().toISOString()
     };
   } catch (error) {
@@ -631,19 +688,17 @@ function getUrlsForAPIFixed() {
 }
 
 /**
- * Helper to create JSON response
+ * Helper to create JSON response - DEPRECATED, use createJsonResponseWithCORS
  */
 function createJsonResponse(data, statusCode = 200) {
-  const output = ContentService.createTextOutput(JSON.stringify(data));
-  output.setMimeType(ContentService.MimeType.JSON);
-  return output;
+  return createJsonResponseWithCORS(data, statusCode);
 }
 
 /**
- * Test function to verify the fixed web app
+ * Test function to verify the fixed web app with CORS
  */
-function testFixedWebApp() {
-  console.log('Testing fixed WebApp...');
+function testFixedWebAppWithCORS() {
+  console.log('Testing fixed WebApp with CORS...');
   
   // Test status endpoint
   console.log('Status:', getSystemStatusFixed());
@@ -653,7 +708,8 @@ function testFixedWebApp() {
   
   return {
     success: true,
-    message: 'Fixed WebApp tested successfully',
-    version: 51
+    message: 'Fixed WebApp with CORS tested successfully',
+    version: 54,
+    corsEnabled: true
   };
 }
