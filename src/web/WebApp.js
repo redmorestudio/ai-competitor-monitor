@@ -6,8 +6,23 @@
 /**
  * Main entry point for web app - handles dashboard AND API requests
  * ENHANCED: Better CORS header handling for GitHub Pages
+ * CRITICAL: doGet() handles OPTIONS preflight requests for CORS
  */
 function doGet(e) {
+  // CRITICAL: Handle OPTIONS preflight requests for CORS
+  // This is required for Google Apps Script to work with GitHub Pages
+  if (!e || !e.parameter || !e.parameter.action) {
+    // Return simple response for OPTIONS preflight or direct access
+    return ContentService.createTextOutput("done")
+      .setMimeType(ContentService.MimeType.TEXT)
+      .setHeaders({
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control',
+        'Access-Control-Max-Age': '86400'
+      });
+  }
+  
   try {
     // Support both 'action' (from new frontend) and 'path' (from old frontend) parameters
     const action = e.parameter.action || e.parameter.path;
@@ -220,7 +235,7 @@ function getSystemStatusFixed() {
       lastRun: lastRun || 'Never',
       companies: config.length,
       urls: totalUrls,
-      version: 55, // ENHANCED CORS VERSION
+      version: 56, // ENHANCED CORS VERSION
       corsFixed: true,
       timestamp: new Date().toISOString()
     };
@@ -729,7 +744,7 @@ function testEnhancedCORSWebApp() {
   return {
     success: true,
     message: 'Enhanced CORS WebApp tested successfully',
-    version: 55,
+    version: 56,
     corsFixed: true,
     enhancedHeaders: true
   };
