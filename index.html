@@ -600,18 +600,19 @@
         function initializeApp() {
             // Clear any corrupted token
             const storedToken = localStorage.getItem('apiToken') || '';
-            // Clean the token - remove any duplicates
+            // Clean the token - remove any duplicates and Bearer prefix
             if (storedToken.includes('dev-token-change-me')) {
                 apiToken = 'dev-token-change-me';
                 localStorage.setItem('apiToken', apiToken);
                 log('Cleaned corrupted token');
             } else {
-                apiToken = storedToken;
+                // Remove Bearer prefix if present
+                apiToken = storedToken.replace(/^Bearer/i, '').trim();
             }
             
             if (apiToken) {
                 document.getElementById('apiToken').value = apiToken;
-                log('Loaded token from storage');
+                log('Loaded token from storage', { token: apiToken.substring(0, 10) + '...' });
                 checkStatus();
             }
         }
@@ -673,7 +674,9 @@
         async function makeRequest(action, params = {}) {
             try {
                 const url = new URL(API_BASE);
-                url.searchParams.append('token', apiToken);
+                // FIXED: Ensure clean token without 'Bearer' prefix
+                const cleanToken = apiToken.replace(/^Bearer/i, '').trim();
+                url.searchParams.append('token', cleanToken);
                 url.searchParams.append('action', action);
                 Object.keys(params).forEach(key => {
                     url.searchParams.append(key, typeof params[key] === 'object' ? JSON.stringify(params[key]) : params[key]);
