@@ -101,8 +101,49 @@ function getCompleteMonitorConfig() {
 
 // ============ CONFIGURATION ============
 // INTELLIGENT_CONFIG is imported from src/intelligent/IntelligentMonitor.js
+const THEBRAIN_API_KEY = 'd945af4be947107625cd9c70563ab4edc1e9346bf24e11791979ecd5a89d849c';
 
-// Configuration for intelligent monitoring is imported from src/Main.gs
+// Monitor configuration
+const MONITOR_CONFIG = {
+  thresholds: {
+    global: 25,
+    company: {},
+    page: {}
+  },
+  aiThresholds: {
+    alertThreshold: 6,
+    minScore: 1,
+    maxScore: 10
+  },
+  contentSelectors: {
+    default: 'main, article, .content, #content',
+    exclude: 'nav, header, footer, .sidebar, .ads'
+  }
+};
+
+// Intelligent monitoring configuration
+const INTELLIGENT_CONFIG = {
+  maxContentLength: 50000,
+  crawlDelay: 2000,
+  relevanceThreshold: 6,
+  keywords: {
+    high: ['launch', 'release', 'announce', 'new', 'available', 'pricing', 'feature', 'update', 'beta', 'preview'],
+    medium: ['improve', 'enhance', 'expand', 'partner', 'integrate', 'support']
+  },
+  pageWeights: {
+    homepage: 1.5,
+    pricing: 2.0,
+    products: 1.8,
+    features: 1.8,
+    blog: 1.2,
+    news: 1.3,
+    announcement: 2.0,
+    technology: 1.5,
+    other: 1.0
+  }
+};
+
+
 
 /**
  * Main entry point for web app - handles all API requests
@@ -1398,4 +1439,324 @@ function testWebApp() {
   console.log('Response:', response.getContent());
   
   return 'Enhanced test complete';
+}
+
+// ============ THEBRAIN INTEGRATION FUNCTIONS ============
+
+/**
+ * Test TheBrain connection
+ */
+function testTheBrainConnection() {
+  try {
+    const url = 'https://api.thebrain.com/v1/brains';
+    const response = UrlFetchApp.fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${THEBRAIN_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      muteHttpExceptions: true
+    });
+    
+    const code = response.getResponseCode();
+    
+    if (code === 200) {
+      logActivity('TheBrain connection successful', 'success');
+      return {
+        success: true,
+        message: 'TheBrain API connection successful',
+        brains: JSON.parse(response.getContentText())
+      };
+    } else {
+      logActivity('TheBrain connection failed', 'error', { code: code });
+      return {
+        success: false,
+        error: `API returned status ${code}`,
+        details: response.getContentText()
+      };
+    }
+  } catch (error) {
+    logActivity('TheBrain connection error', 'error', error.toString());
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Create competitive intelligence brain
+ */
+function createCompetitiveIntelligenceBrain() {
+  try {
+    const brainData = {
+      name: 'AI Competitive Intelligence',
+      description: 'Monitoring AI industry competitors and their changes',
+      tags: ['AI', 'Competition', 'Monitoring', 'Intelligence']
+    };
+    
+    const response = UrlFetchApp.fetch('https://api.thebrain.com/v1/brains', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${THEBRAIN_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(brainData),
+      muteHttpExceptions: true
+    });
+    
+    if (response.getResponseCode() === 201) {
+      const brain = JSON.parse(response.getContentText());
+      
+      // Store brain ID
+      PropertiesService.getScriptProperties().setProperty('THEBRAIN_ID', brain.id);
+      
+      logActivity('Competitive intelligence brain created', 'success', brain);
+      
+      return {
+        success: true,
+        brainId: brain.id,
+        message: 'Competitive intelligence brain created successfully'
+      };
+    } else {
+      return {
+        success: false,
+        error: `Failed to create brain: ${response.getContentText()}`
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Add companies to brain as thoughts
+ */
+function addCompaniesToBrain() {
+  try {
+    const brainId = PropertiesService.getScriptProperties().getProperty('THEBRAIN_ID');
+    if (!brainId) {
+      return {
+        success: false,
+        error: 'No brain ID found. Create brain first.'
+      };
+    }
+    
+    const config = getCompleteMonitorConfig();
+    let companiesAdded = 0;
+    
+    config.forEach(company => {
+      try {
+        const thoughtData = {
+          name: company.company,
+          kind: 'company',
+          tags: ['competitor', 'ai-company'],
+          notes: `Monitoring ${company.urls.length} URLs`
+        };
+        
+        const response = UrlFetchApp.fetch(`https://api.thebrain.com/v1/brains/${brainId}/thoughts`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${THEBRAIN_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          payload: JSON.stringify(thoughtData),
+          muteHttpExceptions: true
+        });
+        
+        if (response.getResponseCode() === 201) {
+          companiesAdded++;
+        }
+        
+        Utilities.sleep(500); // Rate limiting
+        
+      } catch (error) {
+        console.error(`Error adding ${company.company}:`, error);
+      }
+    });
+    
+    return {
+      success: true,
+      companiesAdded: companiesAdded,
+      message: `Added ${companiesAdded} companies to brain`
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Generate competitive landscape analysis
+ */
+function generateCompetitiveLandscape() {
+  try {
+    const brainId = PropertiesService.getScriptProperties().getProperty('THEBRAIN_ID');
+    if (!brainId) {
+      return {
+        success: false,
+        error: 'No brain ID found. Create brain first.'
+      };
+    }
+    
+    // Get recent changes
+    const changes = getStoredChanges(20);
+    
+    // Create relationships between companies based on similar changes
+    let connectionsCreated = 0;
+    
+    changes.forEach(change => {
+      if (change.relevanceScore >= 6) {
+        // This is a significant change, create a thought for it
+        try {
+          const changeThought = {
+            name: `${change.company} - ${change.summary}`,
+            kind: 'change',
+            tags: ['change', 'significant'],
+            notes: `Relevance: ${change.relevanceScore}/10\nMagnitude: ${change.changeMagnitude}%`
+          };
+          
+          UrlFetchApp.fetch(`https://api.thebrain.com/v1/brains/${brainId}/thoughts`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${THEBRAIN_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            payload: JSON.stringify(changeThought),
+            muteHttpExceptions: true
+          });
+          
+          connectionsCreated++;
+          
+        } catch (error) {
+          console.error('Error creating change thought:', error);
+        }
+      }
+    });
+    
+    return {
+      success: true,
+      companiesAnalyzed: getCompleteMonitorConfig().length,
+      connectionsCreated: connectionsCreated,
+      message: 'Competitive landscape analysis generated'
+    };
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Get TheBrain status
+ */
+function getTheBrainStatus() {
+  try {
+    const brainId = PropertiesService.getScriptProperties().getProperty('THEBRAIN_ID');
+    
+    return {
+      enabled: true,
+      apiKey: THEBRAIN_API_KEY ? 'configured' : 'missing',
+      brainId: brainId || null,
+      brainName: 'AI Competitive Intelligence',
+      categories: '10 companies monitored'
+    };
+    
+  } catch (error) {
+    return {
+      enabled: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Test TheBrain integration
+ */
+function testTheBrainIntegration() {
+  try {
+    // First test the connection
+    const connectionTest = testTheBrainConnection();
+    
+    if (!connectionTest.success) {
+      return connectionTest;
+    }
+    
+    // Check if we have a brain ID
+    const brainId = PropertiesService.getScriptProperties().getProperty('THEBRAIN_ID');
+    
+    if (brainId) {
+      return {
+        success: true,
+        message: 'TheBrain integration is working',
+        brainId: brainId,
+        apiKeyStatus: 'configured'
+      };
+    } else {
+      // Try to find existing brain
+      const brains = connectionTest.brains || [];
+      const competitiveBrain = brains.find(b => b.name === 'AI Competitive Intelligence');
+      
+      if (competitiveBrain) {
+        PropertiesService.getScriptProperties().setProperty('THEBRAIN_ID', competitiveBrain.id);
+        return {
+          success: true,
+          message: 'Found existing brain',
+          brainId: competitiveBrain.id
+        };
+      } else {
+        return {
+          success: true,
+          message: 'Connection working, but no brain created yet',
+          brainId: null
+        };
+      }
+    }
+    
+  } catch (error) {
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Add a change to TheBrain (called from storeChange)
+ */
+function addChangeToTheBrain(change) {
+  try {
+    const brainId = PropertiesService.getScriptProperties().getProperty('THEBRAIN_ID');
+    if (!brainId || change.relevanceScore < 6) {
+      return; // Skip if no brain or change not significant
+    }
+    
+    const thoughtData = {
+      name: `${change.company} - ${new Date(change.timestamp).toLocaleDateString()}`,
+      kind: 'change',
+      tags: ['change', change.company.toLowerCase().replace(/\s+/g, '-')],
+      notes: `URL: ${change.url}\nRelevance: ${change.relevanceScore}/10\nMagnitude: ${change.changeMagnitude}%\nSummary: ${change.summary}`
+    };
+    
+    UrlFetchApp.fetch(`https://api.thebrain.com/v1/brains/${brainId}/thoughts`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${THEBRAIN_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(thoughtData),
+      muteHttpExceptions: true
+    });
+    
+  } catch (error) {
+    console.error('Error adding change to TheBrain:', error);
+  }
 }
